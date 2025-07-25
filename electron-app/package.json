@@ -1,0 +1,121 @@
+{
+  "name": "ai-explainer-desktop",
+  "version": "1.0.0",
+  "description": "AI-powered learning desktop application",
+  "main": "main.js",
+  "homepage": "./",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:electron\"",
+    "dev:renderer": "vite",
+    "dev:electron": "wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .",
+    "build": "npm run build:renderer && npm run build:electron",
+    "build:renderer": "vite build",
+    "build:electron": "electron-builder",
+    "start": "electron .",
+    "dist": "npm run build && electron-builder --publish=never",
+    "dist:dir": "npm run build && electron-builder --dir",
+    "dist:linux": "npm run build && electron-builder --linux --publish=never",
+    "dist:mac": "npm run build && electron-builder --mac --publish=never",
+    "dist:win": "npm run build && electron-builder --win --publish=never",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "keywords": [
+    "electron",
+    "ai",
+    "learning",
+    "desktop"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@hookform/resolvers": "^3.9.1",
+    "@radix-ui/react-accordion": "latest",
+    "@radix-ui/react-alert-dialog": "latest",
+    "@radix-ui/react-aspect-ratio": "latest",
+    "@radix-ui/react-avatar": "latest",
+    "@radix-ui/react-checkbox": "latest",
+    "@radix-ui/react-collapsible": "latest",
+    "@radix-ui/react-context-menu": "latest",
+    "@radix-ui/react-dialog": "latest",
+    "@radix-ui/react-dropdown-menu": "latest",
+    "@radix-ui/react-hover-card": "latest",
+    "@radix-ui/react-label": "latest",
+    "@radix-ui/react-menubar": "latest",
+    "@radix-ui/react-navigation-menu": "latest",
+    "@radix-ui/react-popover": "latest",
+    "@radix-ui/react-progress": "latest",
+    "@radix-ui/react-radio-group": "latest",
+    "@radix-ui/react-scroll-area": "latest",
+    "@radix-ui/react-select": "latest",
+    "@radix-ui/react-separator": "latest",
+    "@radix-ui/react-slider": "latest",
+    "@radix-ui/react-slot": "latest",
+    "@radix-ui/react-switch": "latest",
+    "@radix-ui/react-tabs": "latest",
+    "@radix-ui/react-toast": "latest",
+    "@radix-ui/react-toggle": "latest",
+    "@radix-ui/react-toggle-group": "latest",
+    "@radix-ui/react-tooltip": "latest",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "latest",
+    "date-fns": "4.1.0",
+    "embla-carousel-react": "latest",
+    "input-otp": "latest",
+    "lucide-react": "^0.454.0",
+    "next-themes": "latest",
+    "react": "^19",
+    "react-day-picker": "latest",
+    "react-dom": "^19",
+    "react-hook-form": "latest",
+    "react-resizable-panels": "latest",
+    "recharts": "latest",
+    "sonner": "latest",
+    "tailwind-merge": "^2.5.5",
+    "tailwindcss-animate": "^1.0.7",
+    "vaul": "latest",
+    "zod": "^3.24.1",
+    "electron-store": "^8.2.0",
+     "electron-updater": "^6.3.3",
+     "electron-log": "^5.2.0"
+   },
+   "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^32.0.0",
+    "electron-builder": "^25.1.0",
+    "postcss": "^8.5",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5",
+    "vite": "^5.4.19",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.yourapp.ai-explainer-desktop",
+    "productName": "AI Explainer Desktop",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "dist/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.education",
+      "identity": null
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
