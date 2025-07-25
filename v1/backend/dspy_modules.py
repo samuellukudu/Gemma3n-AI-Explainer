@@ -88,22 +88,26 @@ class Quiz(BaseModel):
 # --- DSPy Signatures for Content Generation ---
 
 class GenerateRelatedQuestions(dspy.Signature):
-    """Generate related questions for a given topic."""
+    """Generate related questions for a given topic. 
+    Remember to pay attention to the input language and generate questions in the same language."""
     topic: str = dspy.InputField()
     questions: RelatedQuestionsSet = dspy.OutputField(desc="A list of 5 related questions")
 
 class GenerateLessons(dspy.Signature):
-    """Generate lessons for a given topic."""
+    """Generate lessons for a given topic. 
+    Remember to pay attention to the input language and generate lessons in the same language."""
     topic: str = dspy.InputField()
     lessons: List[Lesson] = dspy.OutputField(desc="A list of 5 lessons with concise content")
 
 class GenerateFlashcards(dspy.Signature):
-    """Generate flashcards for a given topic or lesson dictionary."""
+    """Generate flashcards for a given topic or lesson dictionary. 
+    Remember to pay attention to the input language and generate flashcards in the same language."""
     topic: Union[str, dict] = dspy.InputField()
     flashcards: Flashcards = dspy.OutputField(desc="A list of 5 flashcards")
 
 class GenerateQuiz(dspy.Signature):
-    """Generate a quiz based on flashcards."""
+    """Generate a quiz based on flashcards. 
+    Remember to pay attention to the input language and generate quiz in the same language."""
     flashcards: Union[Flashcards, dict] = dspy.InputField()
     quiz: Quiz = dspy.OutputField(desc="A quiz with 2 true/false questions and 3 multiple choice questions")
 
