@@ -43,6 +43,13 @@ class ContentListResponse(BaseModel):
     items: List[Dict[str, Any]]
     total_count: int
 
+class ContentGenerationStatusResponse(BaseModel):
+    query_id: str
+    lessons_generated: bool
+    related_questions_generated: bool
+    flashcards_generated: Dict[str, bool]  # lesson_index -> generated status
+    quizzes_generated: Dict[str, bool]     # lesson_index -> generated status
+
 # Background task status endpoint
 @router.get("/tasks/{task_id}")
 async def get_task_status(task_id: str):
@@ -159,7 +166,9 @@ async def get_flashcards_by_query_id(query_id: str):
         created_at = None
         
         for record in flashcards_data:
-            all_flashcards.extend(json.loads(record["flashcards_json"]))
+            # Skip records with empty JSON (placeholders)
+            if record["flashcards_json"] and record["flashcards_json"].strip():
+                all_flashcards.extend(json.loads(record["flashcards_json"]))
             if record["processing_time"]:
                 total_processing_time += record["processing_time"]
             if not created_at:
@@ -187,6 +196,10 @@ async def get_flashcards_by_query_id_and_lesson_index(query_id: str, lesson_inde
         if not flashcards_data:
             raise HTTPException(status_code=404, detail=f"Flashcards not found for lesson {lesson_index}")
         
+        # Check if flashcards_json is empty (placeholder)
+        if not flashcards_data["flashcards_json"] or not flashcards_data["flashcards_json"].strip():
+            raise HTTPException(status_code=404, detail=f"Flashcards not yet generated for lesson {lesson_index}")
+        
         return ContentResponse(
             query_id=query_id,
             content=json.loads(flashcards_data["flashcards_json"]),
@@ -208,6 +221,10 @@ async def get_quiz_by_query_id_and_lesson_index(query_id: str, lesson_index: int
         quiz_data = await db.get_quiz_by_query_id_and_lesson_index(query_id, lesson_index)
         if not quiz_data:
             raise HTTPException(status_code=404, detail=f"Quiz not found for lesson {lesson_index}")
+        
+        # Check if quiz_json is empty (placeholder)
+        if not quiz_data["quiz_json"] or not quiz_data["quiz_json"].strip():
+            raise HTTPException(status_code=404, detail=f"Quiz not yet generated for lesson {lesson_index}")
         
         return ContentResponse(
             query_id=query_id,
@@ -267,6 +284,25 @@ async def get_recent_flashcards(limit: int = 50):
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving flashcards history: {str(e)}"
+        )
+
+# Content generation status endpoint
+@router.get("/content-status/{query_id}", response_model=ContentGenerationStatusResponse)
+async def get_content_generation_status(query_id: str):
+    """Get the generation status of all content types for a query"""
+    try:
+        status = await db.check_content_generation_status(query_id)
+        return ContentGenerationStatusResponse(
+            query_id=query_id,
+            lessons_generated=status['lessons_generated'],
+            related_questions_generated=status['related_questions_generated'],
+            flashcards_generated=status['flashcards_generated'],
+            quizzes_generated=status['quizzes_generated']
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error checking content generation status: {str(e)}"
         )
 
 # Performance monitoring endpoint

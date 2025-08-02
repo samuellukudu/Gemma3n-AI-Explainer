@@ -16,6 +16,12 @@ from backend.dspy_modules import (
     Flashcards
 )
 from backend.profiler import profiler, profile_task
+from backend.utils.manual_parsing import (
+    manual_parse_lessons,
+    manual_parse_related_questions,
+    manual_parse_flashcards,
+    manual_parse_quiz
+)
 import os
 
 class TaskQueue:
@@ -194,6 +200,85 @@ class TaskQueue:
             'timestamp': time.time()
         }
     
+    def _extract_raw_response_from_error(self, error):
+        """Extract raw LM response from DSPy error for manual parsing fallback."""
+        raw_response = None
+        
+        # Debug: Print error type and attributes
+        print(f"Error type: {type(error).__name__}")
+        print(f"Error attributes: {dir(error)}")
+        
+        # First try to get lm_response attribute directly
+        if hasattr(error, 'lm_response'):
+            raw_response = error.lm_response
+            print("Extracted raw response from error.lm_response")
+        elif hasattr(error, 'response'):
+            raw_response = error.response
+            print("Extracted raw response from error.response")
+        elif hasattr(error, 'args') and error.args:
+            # Check if any of the args contain the response
+            for arg in error.args:
+                if isinstance(arg, str) and ("```json" in arg or "{" in arg):
+                    raw_response = arg
+                    print("Extracted raw response from error.args")
+                    break
+        
+        if not raw_response:
+            # Try to extract LM response from error message
+            error_str = str(error)
+            print(f"Error string preview: {error_str[:200]}...")
+            
+            if "LM Response:" in error_str:
+                try:
+                    # Try different markers based on content type
+                    markers = [
+                        ("LM Response: [[ ## questions ## ]]", "[[ ## completed ## ]]"),
+                        ("LM Response: [[ ## lessons ## ]]", "[[ ## completed ## ]]"),
+                        ("LM Response: [[ ## flashcards ## ]]", "[[ ## completed ## ]]"),
+                        ("LM Response: [[ ## quiz ## ]]", "[[ ## completed ## ]]"),
+                        ("LM Response:", "\n\n"),  # Fallback for simpler format
+                    ]
+                    
+                    for start_marker, end_marker in markers:
+                        if start_marker in error_str:
+                            start_idx = error_str.find(start_marker) + len(start_marker)
+                            if end_marker in error_str[start_idx:]:
+                                end_idx = error_str.find(end_marker, start_idx)
+                                raw_response = error_str[start_idx:end_idx].strip()
+                                print(f"Extracted raw response from error message using markers: {start_marker[:20]}...")
+                                break
+                            else:
+                                # If no end marker, take everything after start marker
+                                raw_response = error_str[start_idx:].strip()
+                                print(f"Extracted raw response from error message (no end marker)")
+                                break
+                except Exception as extract_error:
+                    print(f"Failed to extract raw response from error: {extract_error}")
+            
+            # Additional fallback: look for JSON-like content in the error string
+            if not raw_response:
+                import re
+                # Look for JSON patterns in the error string
+                json_patterns = [
+                    r'```json\s*({.*?})\s*```',
+                    r'({\s*"[^"]+"\s*:.*?})',
+                    r'\[\s*{.*?}\s*\]'
+                ]
+                
+                for pattern in json_patterns:
+                    matches = re.findall(pattern, error_str, re.DOTALL)
+                    if matches:
+                        raw_response = matches[0]
+                        print(f"Extracted raw response using regex pattern: {pattern[:30]}...")
+                        break
+        
+        if raw_response:
+            print(f"Raw response preview: {str(raw_response)[:100]}...")
+        else:
+            print("No raw response could be extracted")
+        
+        return raw_response
+    
     def log_performance_summary(self):
         """Log performance summary including blocking code detection"""
         profiler.log_performance_summary()
@@ -215,13 +300,21 @@ class TaskQueue:
         from backend.monitoring import performance_monitor
         from backend.utils import manual_parse_related_questions
 
-        start_time = time.time()
+        query_id = payload.get('query_id')
         query = payload['query']
         user_id = payload.get('user_id')
-        query_id = payload.get('query_id')
+        
+        if not query_id or not query:
+            return {'error': 'Missing query_id or query', 'success': False}
+        
+        # Create placeholder to indicate generation has started
+        await db.create_related_questions_placeholder(query_id)
+        
+        start_time = time.time()
 
         try:
-            response = await generate_related_questions_module.acall(topic=query)
+            # Use asyncio.to_thread to run synchronous DSPy module in async context
+            response = await asyncio.to_thread(generate_related_questions_module, topic=query)
             performance_monitor.record_cache_miss()
 
             related_questions = response.questions.related_questions
@@ -244,24 +337,8 @@ class TaskQueue:
             print(f"DSPy parsing failed for related questions: {e}")
             print("Attempting manual parsing...")
             
-            # Get the raw response from the error
-            raw_response = None
-            if hasattr(e, 'lm_response'):
-                raw_response = e.lm_response
-            else:
-                # Try to extract LM response from error message
-                error_str = str(e)
-                if "LM Response:" in error_str:
-                    try:
-                        start_marker = "LM Response: [[ ## questions ## ]]"
-                        end_marker = "[[ ## completed ## ]]"
-                        if start_marker in error_str and end_marker in error_str:
-                            start_idx = error_str.find(start_marker) + len(start_marker)
-                            end_idx = error_str.find(end_marker)
-                            raw_response = error_str[start_idx:end_idx].strip()
-                            print(f"Extracted raw response from error message")
-                    except Exception as extract_error:
-                        print(f"Failed to extract raw response from error: {extract_error}")
+            # Get the raw response from the error using improved extraction
+            raw_response = self._extract_raw_response_from_error(e)
             
             if raw_response:
                 try:
@@ -303,13 +380,21 @@ class TaskQueue:
         from backend.monitoring import performance_monitor
         from backend.utils import manual_parse_lessons, manual_parse_flashcards, manual_parse_quiz
         
-        start_time = time.time()
+        query_id = payload.get('query_id')
         query = payload['query']
         user_id = payload.get('user_id')
-        query_id = payload.get('query_id')
+        
+        if not query_id or not query:
+            return {'error': 'Missing query_id or query', 'success': False}
+        
+        # Create placeholder to indicate generation has started
+        await db.create_lessons_placeholder(query_id)
+        
+        start_time = time.time()
 
         try:
-            response = await generate_lessons_module.acall(topic=query)
+            # Use asyncio.to_thread to run synchronous DSPy module in async context
+            response = await asyncio.to_thread(generate_lessons_module, topic=query)
             lessons = response.lessons
             performance_monitor.record_cache_miss()
 
@@ -324,10 +409,15 @@ class TaskQueue:
             # Schedule flashcard and quiz generation in background
             if lessons:
                 async def generate_flashcards_and_quiz_for_lesson(lesson: Lesson, lesson_index: int):
+                    # Create placeholders to indicate generation has started
+                    await db.create_flashcards_placeholder(query_id, lesson_index, lesson.model_dump_json())
+                    await db.create_quiz_placeholder(query_id, lesson_index)
+                    
                     try:
                         start_time_fc = time.time()
                         
-                        flashcard_response = await generate_flashcards_module.acall(topic=lesson.model_dump())
+                        # Use asyncio.to_thread to run synchronous DSPy module in async context
+                        flashcard_response = await asyncio.to_thread(generate_flashcards_module, topic=lesson.model_dump())
                         flashcards = flashcard_response.flashcards.cards
                         
                         processing_time_fc = time.time() - start_time_fc
@@ -342,7 +432,8 @@ class TaskQueue:
 
                         # Generate quiz
                         start_time_quiz = time.time()
-                        quiz_response = await generate_quiz_module.acall(flashcards=flashcard_response.flashcards.model_dump())
+                        # Use asyncio.to_thread to run synchronous DSPy module in async context
+                        quiz_response = await asyncio.to_thread(generate_quiz_module, flashcards=flashcard_response.flashcards.model_dump())
                         quiz = quiz_response.quiz
                         processing_time_quiz = time.time() - start_time_quiz
 
@@ -357,8 +448,8 @@ class TaskQueue:
                         print(f"Error generating flashcards/quiz for lesson {lesson_index}: {e}")
                         # Try manual parsing for flashcards
                         try:
-                            if hasattr(e, 'lm_response'):
-                                raw_response = e.lm_response
+                            raw_response = self._extract_raw_response_from_error(e)
+                            if raw_response:
                                 flashcards = manual_parse_flashcards(raw_response)
                                 if flashcards:
                                     print(f"Manual parsing of flashcards successful for lesson {lesson_index}")
@@ -374,11 +465,13 @@ class TaskQueue:
                                     
                                     # Try manual parsing for quiz
                                     try:
-                                        quiz_response = await generate_quiz_module.acall(flashcards={"cards": [c.model_dump() for c in flashcards]})
+                                        # Use asyncio.to_thread to run synchronous DSPy module in async context
+                                        quiz_response = await asyncio.to_thread(generate_quiz_module, flashcards={"cards": [c.model_dump() for c in flashcards]})
                                         quiz = quiz_response.quiz
                                     except Exception as quiz_e:
-                                        if hasattr(quiz_e, 'lm_response'):
-                                            quiz = manual_parse_quiz(quiz_e.lm_response)
+                                        quiz_raw_response = self._extract_raw_response_from_error(quiz_e)
+                                        if quiz_raw_response:
+                                            quiz = manual_parse_quiz(quiz_raw_response)
                                             if quiz:
                                                 print(f"Manual parsing of quiz successful for lesson {lesson_index}")
                                                 processing_time_quiz = time.time() - start_time_quiz
@@ -392,7 +485,10 @@ class TaskQueue:
                             print(f"Manual parsing also failed for lesson {lesson_index}: {manual_e}")
 
                 tasks = [generate_flashcards_and_quiz_for_lesson(lesson, index) for index, lesson in enumerate(lessons)]
-                asyncio.create_task(asyncio.gather(*tasks, return_exceptions=True))
+                # Start background tasks without awaiting them
+                if tasks:
+                    for task in tasks:
+                        asyncio.create_task(task)
 
             return {
                 'lessons': [l.model_dump() for l in lessons],
@@ -403,9 +499,10 @@ class TaskQueue:
             print(f"DSPy parsing failed for lessons: {e}")
             print("Attempting manual parsing...")
             
-            # Get the raw response from the error
-            if hasattr(e, 'lm_response'):
-                raw_response = e.lm_response
+            # Get the raw response from the error using improved extraction
+            raw_response = self._extract_raw_response_from_error(e)
+            
+            if raw_response:
                 lessons = manual_parse_lessons(raw_response)
                 if lessons:
                     print(f"Manual parsing successful! Found {len(lessons)} lessons.")
@@ -424,7 +521,8 @@ class TaskQueue:
                             try:
                                 start_time_fc = time.time()
                                 
-                                flashcard_response = await generate_flashcards_module.acall(topic=lesson.model_dump())
+                                # Use asyncio.to_thread to run synchronous DSPy module in async context
+                                flashcard_response = await asyncio.to_thread(generate_flashcards_module, topic=lesson.model_dump())
                                 flashcards = flashcard_response.flashcards.cards
                                 
                                 processing_time_fc = time.time() - start_time_fc
@@ -439,7 +537,8 @@ class TaskQueue:
 
                                 # Generate quiz
                                 start_time_quiz = time.time()
-                                quiz_response = await generate_quiz_module.acall(flashcards=flashcard_response.flashcards.model_dump())
+                                # Use asyncio.to_thread to run synchronous DSPy module in async context
+                                quiz_response = await asyncio.to_thread(generate_quiz_module, flashcards=flashcard_response.flashcards.model_dump())
                                 quiz = quiz_response.quiz
                                 processing_time_quiz = time.time() - start_time_quiz
 
@@ -454,8 +553,8 @@ class TaskQueue:
                                 print(f"Error generating flashcards/quiz for lesson {lesson_index}: {e}")
                                 # Try manual parsing for flashcards
                                 try:
-                                    if hasattr(e, 'lm_response'):
-                                        raw_response = e.lm_response
+                                    raw_response = self._extract_raw_response_from_error(e)
+                                    if raw_response:
                                         flashcards = manual_parse_flashcards(raw_response)
                                         if flashcards:
                                             print(f"Manual parsing of flashcards successful for lesson {lesson_index}")
@@ -471,11 +570,13 @@ class TaskQueue:
                                             
                                             # Try manual parsing for quiz
                                             try:
-                                                quiz_response = await generate_quiz_module.acall(flashcards={"cards": [c.model_dump() for c in flashcards]})
+                                                # Use asyncio.to_thread to run synchronous DSPy module in async context
+                                                quiz_response = await asyncio.to_thread(generate_quiz_module, flashcards={"cards": [c.model_dump() for c in flashcards]})
                                                 quiz = quiz_response.quiz
                                             except Exception as quiz_e:
-                                                if hasattr(quiz_e, 'lm_response'):
-                                                    quiz = manual_parse_quiz(quiz_e.lm_response)
+                                                quiz_raw_response = self._extract_raw_response_from_error(quiz_e)
+                                                if quiz_raw_response:
+                                                    quiz = manual_parse_quiz(quiz_raw_response)
                                                     if quiz:
                                                         print(f"Manual parsing of quiz successful for lesson {lesson_index}")
                                                         processing_time_quiz = time.time() - start_time_quiz
@@ -489,7 +590,9 @@ class TaskQueue:
                                     print(f"Manual parsing also failed for lesson {lesson_index}: {manual_e}")
 
                         tasks = [generate_flashcards_and_quiz_for_lesson_with_manual_fallback(lesson, index) for index, lesson in enumerate(lessons)]
-                        asyncio.create_task(asyncio.gather(*tasks, return_exceptions=True))
+                        # Start background tasks without awaiting them
+                        if tasks:
+                            asyncio.create_task(asyncio.gather(*tasks, return_exceptions=True))
                     
                     return {
                         'lessons': [l.model_dump() for l in lessons],
