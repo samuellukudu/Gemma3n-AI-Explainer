@@ -39,10 +39,16 @@ export default function Navbar({
                 currentPage === item.id
                   ? "text-gray-900 font-medium"
                   : "text-gray-500 hover:text-gray-900"
-              } transition-colors`}
+              } transition-colors relative group`}
               onClick={() => onNavigate(item.id)}
+              title={item.id === 'explanation' ? 'Continue your most recent lesson' : undefined}
             >
               {item.label}
+              {item.id === 'explanation' && (
+                <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                  Continue most recent lesson
+                </div>
+              )}
             </button>
           ))}
         </div>

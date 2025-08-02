@@ -98,16 +98,14 @@ export default function ExplanationPage({
     }
   }, [apiState.queryId, currentStepIndex, topic, lessonsState.lessons.length, isUserQuery])
 
-  // Watch for API state changes and fetch lessons (only for fresh queries)
+  // Watch for API state changes and fetch lessons
   useEffect(() => {
     if (apiState.queryId && !lessonsState.lessons.length && !lessonsState.loading && !lessonsState.error) {
-      // Only fetch if this is a fresh query (has recent activity)
-      const isRecentQuery = apiState.loading || (apiState.progress && apiState.progress !== 'idle')
-      if (isRecentQuery) {
-        fetchLessons(apiState.queryId)
-      }
+      // Fetch lessons whenever we have a queryId but no lessons loaded
+      // This handles both fresh queries and returning to explanation tab
+      fetchLessons(apiState.queryId)
     }
-  }, [apiState.queryId, lessonsState.lessons.length, lessonsState.loading, lessonsState.error, fetchLessons, apiState.loading, apiState.progress])
+  }, [apiState.queryId, lessonsState.lessons.length, lessonsState.loading, lessonsState.error, fetchLessons])
 
   const handleNavigate = (page: string) => {
     switch (page) {
@@ -271,7 +269,41 @@ export default function ExplanationPage({
     )
   }
 
-  if (!lessonsState.lessons.length) return null
+  // Show helpful message if no lessons are available
+  if (!lessonsState.lessons.length && !apiState.loading && !lessonsState.loading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar 
+          currentPage="explanation" 
+          isOnline={true} 
+          onNavigate={handleNavigate}
+        />
+        
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center py-20">
+              <Brain className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">No Lessons Available</h2>
+              <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                {topic ? 
+                  `No lessons found for "${topic}". This might be a new topic that needs to be generated.` :
+                  "Start learning by selecting a topic or continue from your existing lessons."
+                }
+              </p>
+              <div className="flex gap-4 justify-center">
+                <Button onClick={onBack} className="bg-blue-500 hover:bg-blue-600 text-white">
+                  Start New Topic
+                </Button>
+                <Button onClick={onShowExplore} variant="outline" className="bg-transparent">
+                  Explore Topics
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const currentLesson = lessonsState.lessons[currentStepIndex]
   const isLastStep = currentStepIndex >= lessonsState.lessons.length - 1

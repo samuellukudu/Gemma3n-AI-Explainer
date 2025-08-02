@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import APIClient, { APIClientError } from '../lib/api-client'
 import { QueryRequest, ContentResponse, ContentTaskType, TaskStatus } from '../types/api'
 import { useTaskTracker } from './use-task-tracker'
+import { offlineManager } from '../lib/offline-manager'
 
 interface QueryState {
   loading: boolean
@@ -37,10 +38,54 @@ export function useApiQuery(): UseApiQueryReturn {
       ...prev,
       loading: true,
       error: null,
-      progress: 'Checking backend connection...',
+      progress: 'Checking for cached query...',
     }))
 
     try {
+      // First, check if we have this query cached
+      const cachedQueryId = await offlineManager.getCachedQueryId(query)
+      
+      if (cachedQueryId) {
+        console.log('Found cached query ID:', cachedQueryId)
+        setState(prev => ({
+          ...prev,
+          progress: 'Found cached query, loading content...',
+        }))
+        
+        // Try to fetch existing content with the cached query ID
+        try {
+          const [lessons, relatedQuestions] = await Promise.allSettled([
+            APIClient.getLessons(cachedQueryId),
+            APIClient.getRelatedQuestions(cachedQueryId)
+          ])
+          
+          const lessonsResult = lessons.status === 'fulfilled' ? lessons.value : null
+          const relatedQuestionsResult = relatedQuestions.status === 'fulfilled' ? relatedQuestions.value : null
+          
+          if (lessonsResult) {
+            console.log('Successfully loaded cached content')
+            setState(prev => ({
+              ...prev,
+              loading: false,
+              queryId: cachedQueryId,
+              lessons: lessonsResult,
+              relatedQuestions: relatedQuestionsResult,
+              progress: 'Cached content loaded!',
+            }))
+            return
+          }
+        } catch (cacheError) {
+          console.log('Cached content not available, will submit new query:', cacheError)
+          // Continue to submit new query if cached content is not available
+        }
+      }
+      
+      // If no cache or cache failed, proceed with new query submission
+      setState(prev => ({
+        ...prev,
+        progress: 'Checking backend connection...',
+      }))
+      
       // First check if backend is reachable
       try {
         await APIClient.healthCheck()
@@ -59,17 +104,17 @@ export function useApiQuery(): UseApiQueryReturn {
 
       setState(prev => ({
         ...prev,
-        progress: 'Submitting query to backend...',
+        progress: 'Submitting new query to backend...',
       }))
 
       // Start task tracking immediately
       taskTracker.startTracking(`query-${Date.now()}`)
 
-
+      console.log('Submitting new query:', request)
 
       // Use the original working method but with task tracker updates
       const result = await APIClient.submitQueryAndWait(request, (progress) => {
-
+        console.log('Progress update:', progress)
         setState(prev => ({
           ...prev,
           progress,
@@ -77,17 +122,17 @@ export function useApiQuery(): UseApiQueryReturn {
 
         // Update task tracker based on progress messages
         if (progress.includes('submitted')) {
-
+          console.log('Query submitted, updating task progress')
           taskTracker.updateTaskProgress(ContentTaskType.LESSONS, 20)
           taskTracker.updateTaskProgress(ContentTaskType.RELATED_QUESTIONS, 10)
         } else if (progress.includes('Lessons ready')) {
-
+          console.log('Lessons ready, marking task completed')
           taskTracker.markTaskCompleted(ContentTaskType.LESSONS)
           taskTracker.updateTaskProgress(ContentTaskType.RELATED_QUESTIONS, 50)
           // Start flashcards generation now that lessons are ready
           taskTracker.updateTaskProgress(ContentTaskType.FLASHCARDS, 10)
         } else if (progress.includes('Related questions ready')) {
-
+          console.log('Related questions ready, marking task completed')
           taskTracker.markTaskCompleted(ContentTaskType.RELATED_QUESTIONS)
           // Continue with flashcards if lessons are also done
           const lessonsTask = taskTracker.getTaskByType(ContentTaskType.LESSONS)
@@ -95,7 +140,7 @@ export function useApiQuery(): UseApiQueryReturn {
             taskTracker.updateTaskProgress(ContentTaskType.FLASHCARDS, 30)
           }
         } else if (progress.includes('may take longer')) {
-
+          console.log('Related questions taking longer, marking as failed')
           taskTracker.markTaskFailed(ContentTaskType.RELATED_QUESTIONS, 'Related questions are taking longer than expected')
           // Continue with flashcards if lessons are done
           const lessonsTask = taskTracker.getTaskByType(ContentTaskType.LESSONS)
@@ -142,13 +187,19 @@ export function useApiQuery(): UseApiQueryReturn {
         }, 1000)
       }
 
+      // Cache the new query ID for future use
+      if (result.queryId) {
+        await offlineManager.saveQueryMapping(query, result.queryId)
+        console.log('Cached new query ID:', result.queryId)
+      }
+
       setState(prev => ({
         ...prev,
         loading: false,
         queryId: result.queryId,
         lessons: result.lessons || null,
         relatedQuestions: result.relatedQuestions || null,
-        progress: 'Content ready!',
+        progress: 'Query completed!',
       }))
 
     } catch (error) {

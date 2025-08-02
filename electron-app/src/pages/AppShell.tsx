@@ -58,15 +58,29 @@ export default function AppShell() {
     setCurrentState("lessons")
   }
 
-  const handleShowExplanation = () => {
-    // Only navigate to explanation if we have a current topic
+  const handleShowExplanation = useCallback(async () => {
+    // If we already have a current topic, just navigate to explanation
     if (currentTopic) {
       setCurrentState("explanation")
+      // Preserve the current explanation state when returning to explanation tab
+      // Don't reset currentExplanation here to maintain queryId and lesson context
+      return
+    }
+    
+    // If no current topic, try to load the most recent lesson
+    if (lessonProgressList.length > 0) {
+      // Sort by creation date to get the most recent lesson
+      const mostRecentLesson = lessonProgressList.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0]
+      
+      // Load the most recent lesson
+      await handleStartExploration(mostRecentLesson.topic, undefined, true)
     } else {
-      // If no topic is set, redirect to home to select a topic first
+      // If no lessons exist, redirect to home to select a topic first
       setCurrentState("home")
     }
-  }
+  }, [currentTopic, lessonProgressList, handleStartExploration])
 
   const handleGenerateFlashcards = (explanation: any) => {
     setCurrentExplanation(explanation)
