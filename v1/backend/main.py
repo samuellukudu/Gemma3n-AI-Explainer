@@ -15,6 +15,7 @@ from backend.api.routes import router
 from backend.database import db
 from backend.task_queue import task_queue
 from backend.profiler import profiler
+from backend.cache import cache_cleanup_task
 
 # Validate environment variables
 try:
@@ -67,6 +68,10 @@ async def startup_event():
     
     # Start periodic performance monitoring in the background
     asyncio.create_task(periodic_performance_monitoring())
+    
+    # Start cache cleanup task in the background
+    asyncio.create_task(cache_cleanup_task())
+    print("Cache cleanup task started")
     
     print(f"Starting Gemma Hackathon API on {settings.HOST}:{settings.PORT}")
     print(f"Debug mode: {settings.DEBUG}")

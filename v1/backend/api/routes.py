@@ -9,6 +9,7 @@ from backend.task_queue import task_queue
 from backend.database import db
 from backend.monitoring import performance_monitor
 from backend.profiler import profile_endpoint
+from backend.cache import query_cache
 import logging
 import uuid
 from datetime import datetime
@@ -347,3 +348,77 @@ async def get_performance_metrics():
             "error": str(e),
             "timestamp": time.time()
         }
+
+# Cache management endpoints
+@router.get("/cache/stats")
+async def get_cache_stats():
+    """Get comprehensive cache statistics"""
+    try:
+        cache_stats = await query_cache.get_stats()
+        performance_stats = performance_monitor.get_stats()
+        
+        return {
+            "status": "success",
+            "cache": cache_stats,
+            "performance": {
+                "cache_hits": performance_stats["cache"]["hits"],
+                "cache_misses": performance_stats["cache"]["misses"],
+                "hit_rate_percent": performance_stats["cache"]["hit_rate_percent"]
+            },
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving cache stats: {str(e)}"
+        )
+
+@router.delete("/cache/clear")
+async def clear_cache():
+    """Clear all cached content"""
+    try:
+        await query_cache.clear()
+        return {
+            "status": "success",
+            "message": "Cache cleared successfully",
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error clearing cache: {str(e)}"
+        )
+
+@router.delete("/cache/query/{query_id}")
+async def clear_query_cache(query_id: str):
+    """Clear cached content for a specific query_id"""
+    try:
+        await query_cache.invalidate_query(query_id)
+        return {
+            "status": "success",
+            "message": f"Cache cleared for query_id: {query_id}",
+            "query_id": query_id,
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error clearing query cache: {str(e)}"
+        )
+
+@router.delete("/cache/content-type/{content_type}")
+async def clear_content_type_cache(content_type: str):
+    """Clear cached content for a specific content type"""
+    try:
+        await query_cache.invalidate_content_type(content_type)
+        return {
+            "status": "success",
+            "message": f"Cache cleared for content type: {content_type}",
+            "content_type": content_type,
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error clearing content type cache: {str(e)}"
+        )

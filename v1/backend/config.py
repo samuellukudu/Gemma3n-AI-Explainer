@@ -27,6 +27,10 @@ class Settings:
     # Task Queue Configuration
     TASK_QUEUE_WORKERS: int = int(os.getenv("TASK_QUEUE_WORKERS", "4"))
     
+    # Cache Configuration
+    CACHE_MAX_SIZE: int = int(os.getenv("CACHE_MAX_SIZE", "1000"))
+    CACHE_TTL_HOURS: int = int(os.getenv("CACHE_TTL_HOURS", "24"))
+    
     # CORS Configuration
     CORS_ORIGINS: list = os.getenv("CORS_ORIGINS", "*").split(",")
     

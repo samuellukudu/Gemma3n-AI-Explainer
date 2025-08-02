@@ -418,5 +418,7 @@ class Database:
                 rows = await cursor.fetchall()
                 return [dict(row) for row in rows]
 
-# Global database instance
-db = Database()
+# Global database instance with caching
+from backend.cache import query_cache, CachedDatabase
+_db_instance = Database()
+db = CachedDatabase(_db_instance, query_cache)
