@@ -47,6 +47,7 @@ interface LessonProgressInfo {
   lastAccessedLesson: number
   progress: number
   createdAt: string
+  lastAccessedAt?: string
 }
 
 interface UseLessonProgressReturn {
@@ -84,10 +85,21 @@ export function useLessonProgress(): UseLessonProgressReturn {
             const topicKey = topicInfo.topic.toLowerCase().trim()
             const existingEntry = progressMap.get(topicKey)
             
+            // Get the most recent access time from lesson progress data
+            const progressEntries = Object.values(progress)
+            const lastAccessedAt = progressEntries.length > 0 
+              ? progressEntries.reduce((latest, entry) => 
+                  new Date(entry.lastAccessed) > new Date(latest) ? entry.lastAccessed : latest, 
+                  progressEntries[0].lastAccessed
+                )
+              : topicInfo.createdAt
+            
             if (existingEntry) {
               // Merge with existing entry - keep the most recent data
               const isMoreRecent = new Date(topicInfo.createdAt) > new Date(existingEntry.createdAt)
-              if (isMoreRecent || completedLessons > existingEntry.completedLessons) {
+              const wasAccessedMoreRecently = new Date(lastAccessedAt) > new Date(existingEntry.lastAccessedAt || existingEntry.createdAt)
+              
+              if (isMoreRecent || completedLessons > existingEntry.completedLessons || wasAccessedMoreRecently) {
                 progressMap.set(topicKey, {
                   queryId: isMoreRecent ? queryId : existingEntry.queryId, // Use most recent query ID
                   topic: topicInfo.topic,
@@ -98,7 +110,8 @@ export function useLessonProgress(): UseLessonProgressReturn {
                     (completedLessons / topicInfo.totalLessons) * 100,
                     existingEntry.progress
                   ),
-                  createdAt: isMoreRecent ? topicInfo.createdAt : existingEntry.createdAt
+                  createdAt: isMoreRecent ? topicInfo.createdAt : existingEntry.createdAt,
+                  lastAccessedAt: wasAccessedMoreRecently ? lastAccessedAt : (existingEntry.lastAccessedAt || existingEntry.createdAt)
                 })
               }
             } else {
@@ -110,16 +123,21 @@ export function useLessonProgress(): UseLessonProgressReturn {
                 completedLessons,
                 lastAccessedLesson,
                 progress: (completedLessons / topicInfo.totalLessons) * 100,
-                createdAt: topicInfo.createdAt
+                createdAt: topicInfo.createdAt,
+                lastAccessedAt
               })
             }
           }
         }
       }
       
-      // Convert map to array and sort by creation date (most recent first)
+      // Convert map to array and sort by most recent access/creation date (most recent first)
       const progressList = Array.from(progressMap.values())
-      progressList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      progressList.sort((a, b) => {
+        const aTime = new Date(a.lastAccessedAt || a.createdAt).getTime()
+        const bTime = new Date(b.lastAccessedAt || b.createdAt).getTime()
+        return bTime - aTime
+      })
       
       setLessonProgressList(progressList)
     } catch (error) {

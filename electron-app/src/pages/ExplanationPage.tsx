@@ -20,6 +20,7 @@ interface ExplanationPageProps {
   onGenerateFlashcards: (explanation: any) => void
   onShowLibrary: () => void
   onShowExplore: () => void
+  onShowLessons: () => void
   onStepNavigation: (stepIndex: number) => void
 }
 
@@ -31,6 +32,7 @@ export default function ExplanationPage({
   onGenerateFlashcards = () => {},
   onShowLibrary = () => {},
   onShowExplore = () => {},
+  onShowLessons = () => {},
   onStepNavigation = () => {},
 }: Partial<ExplanationPageProps>) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
@@ -117,6 +119,9 @@ export default function ExplanationPage({
         break
       case "explore":
         onShowExplore()
+        break
+      case "lessons":
+        onShowLessons()
         break
       default:
         // Handle other navigation

@@ -183,6 +183,7 @@ export default function AppShell() {
           onGenerateFlashcards={handleGenerateFlashcards}
           onShowLibrary={handleShowLibrary}
           onShowExplore={handleShowExplore}
+          onShowLessons={handleShowLessons}
           onStepNavigation={handleStepNavigation}
         />
       )
