@@ -1,4 +1,4 @@
-import { offlineDB } from './db';
+import { offlineDB, type SyncQueueItem } from './db';
 import APIClient from './api-client';
 import { EnhancedOfflineManager } from './offline-manager';
 
@@ -6,6 +6,7 @@ interface PendingSyncItem {
   id: string;
   type: 'explanation' | 'flashcard' | 'quiz';
   data: any;
+  retryCount: number;
 }
 
 export class DesktopOfflineManager extends EnhancedOfflineManager {
@@ -34,7 +35,6 @@ export class DesktopOfflineManager extends EnhancedOfflineManager {
       id: Date.now().toString(),
       type,
       data,
-      timestamp: new Date().toISOString(),
       retryCount: 0
     }
     this.desktopSyncQueue.push(item)
@@ -44,34 +44,34 @@ export class DesktopOfflineManager extends EnhancedOfflineManager {
   public async syncPendingItems() {
     for (const item of this.desktopSyncQueue) {
       try {
-        await this.syncItem(item);
+        await this.syncDesktopItem(item);
         await this.markItemSynced(item.id);
       } catch (error) {
-
+        console.error('Sync failed for item:', item, error);
       }
     }
   }
 
-  private async syncItem(item: PendingSyncItem) {
+  private async syncDesktopItem(item: PendingSyncItem) {
     // Sync to API based on type
     switch (item.type) {
       case 'explanation':
         // Use generic API call - adjust endpoint based on your backend
-        await fetch(`http://localhost:8000/api/explanations`, { 
+        await fetch(`http://localhost:8420/api/explanations`, { 
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(item.data) 
         });
         break;
       case 'flashcard':
-        await fetch(`http://localhost:8000/api/flashcards`, { 
+        await fetch(`http://localhost:8420/api/flashcards`, { 
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(item.data) 
         });
         break;
       case 'quiz':
-        await fetch(`http://localhost:8000/api/quiz`, { 
+        await fetch(`http://localhost:8420/api/quiz`, { 
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(item.data) 
