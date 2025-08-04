@@ -9,7 +9,7 @@ This guide will help you quickly set up and run the Gemma3n AI Explainer applica
 Before running the application, make sure you have the following installed:
 
 1. **Python 3.11+** - [Download Python](https://www.python.org/downloads/)
-2. **Node.js and npm** - [Download Node.js](https://nodejs.org/)
+2. **Node.js 20+ and npm** - [Download Node.js](https://nodejs.org/) (Recommended: Latest LTS version)
 3. **uv** (Python package manager) - [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
    ```bash
    curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -166,25 +166,31 @@ The frontend automatically connects to the backend on port 8420. No additional c
 2. **"npm not found" error**
    - Install Node.js from https://nodejs.org/
 
-3. **"ollama not found" error**
+3. **Node.js engine warnings (EBADENGINE)**
+   - These warnings appear when using Node.js < 20
+   - **Recommended**: Upgrade to Node.js 20+ LTS from https://nodejs.org/
+   - **Alternative**: Warnings are non-fatal and can be ignored if upgrading is not possible
+   - Check your Node.js version: `node --version`
+
+4. **"ollama not found" error**
    - Install Ollama from https://ollama.ai/download
    - Make sure Ollama service is running: `ollama serve`
 
-4. **Model download issues**
+5. **Model download issues**
    - Ensure you have sufficient disk space (4-8GB for models)
    - Check internet connection for model download
    - Manually download model: `ollama run gemma3n:e4b` or `ollama run gemma3n:e2b`
 
-5. **Ollama connection errors**
+6. **Ollama connection errors**
    - Verify Ollama is running: `ollama list`
    - Check if Ollama service is accessible: `curl http://localhost:11434/api/version`
    - Restart Ollama service if needed
 
-6. **Port already in use**
+7. **Port already in use**
    - Stop other services using ports 3000, 8420, or 11434 (Ollama)
    - Or use `./run_app.sh stop` to stop our services
 
-7. **Services not starting**
+8. **Services not starting**
    - Check logs: `./run_app.sh logs backend` or `./run_app.sh logs frontend`
    - Ensure all prerequisites are installed
    - Verify Ollama model is properly downloaded: `ollama list`
