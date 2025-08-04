@@ -107,23 +107,34 @@ setup_backend() {
         exit 1
     fi
     
-    # Create virtual environment with uv
-    print_status "Creating virtual environment with uv..."
-    uv venv --python 3.11
+    # Check if virtual environment already exists
+    if [ ! -d ".venv" ]; then
+        print_status "Creating virtual environment with uv..."
+        uv venv --python 3.11
+    else
+        print_status "Virtual environment already exists, skipping creation..."
+    fi
     
-    # Activate virtual environment and install dependencies
-    print_status "Installing backend dependencies..."
+    # Activate virtual environment
     source .venv/bin/activate
-    uv pip install -r requirements.txt
+    
+    # Check if dependencies are already installed by checking for a key package
+    if ! python -c "import fastapi" 2>/dev/null; then
+        print_status "Installing backend dependencies..."
+        uv pip install -r requirements.txt
+    else
+        print_status "Backend dependencies already installed, skipping installation..."
+    fi
     
     # Setup Ollama model first
     cd ..
     setup_ollama_model
     cd v1
     
-    # Create .env file with proper model configuration
-    print_status "Creating .env file with model configuration..."
-    cat > .env << EOF
+    # Create or update .env file with proper model configuration
+    if [ ! -f ".env" ]; then
+        print_status "Creating .env file with model configuration..."
+        cat > .env << EOF
 # AI/LLM Configuration
 BASE_URL=http://localhost:11434/v1  # Ollama default URL
 API_KEY=ollama
@@ -137,11 +148,20 @@ DATABASE_URL=sqlite:///./app.db
 
 # Other configurations from env.example
 EOF
-    
-    # Append any additional configurations from env.example that aren't covered above
-    if [ -f "env.example" ]; then
-        print_status "Adding additional configurations from env.example..."
-        grep -v "^BASE_URL\|^API_KEY\|^MODEL\|^PORT\|^DATABASE_URL\|^#" env.example >> .env 2>/dev/null || true
+        
+        # Append any additional configurations from env.example that aren't covered above
+        if [ -f "env.example" ]; then
+            print_status "Adding additional configurations from env.example..."
+            grep -v "^BASE_URL\|^API_KEY\|^MODEL\|^PORT\|^DATABASE_URL\|^#" env.example >> .env 2>/dev/null || true
+        fi
+    else
+        print_status ".env file already exists, updating MODEL configuration..."
+        # Update the MODEL line in existing .env file
+        if grep -q "^MODEL=" .env; then
+            sed -i.bak "s/^MODEL=.*/MODEL=$MODEL_VARIANT/" .env && rm -f .env.bak
+        else
+            echo "MODEL=$MODEL_VARIANT" >> .env
+        fi
     fi
     
     print_success "Backend setup completed!"
@@ -160,17 +180,49 @@ setup_frontend() {
         exit 1
     fi
     
-    # Install frontend dependencies
-    print_status "Installing frontend dependencies..."
-    npm install
+    # Check if node_modules already exists and has packages
+    if [ ! -d "node_modules" ] || [ ! -f "node_modules/.package-lock.json" ]; then
+        print_status "Installing frontend dependencies..."
+        npm install
+    else
+        print_status "Frontend dependencies already installed, skipping installation..."
+    fi
     
     print_success "Frontend setup completed!"
     cd ..
 }
 
+# Function to kill process on specific port
+kill_port() {
+    local port=$1
+    print_status "Checking for existing processes on port $port..."
+    
+    # Find process using the port
+    local pid=$(lsof -ti:$port 2>/dev/null)
+    
+    if [ -n "$pid" ]; then
+        print_warning "Found process $pid using port $port. Killing it..."
+        kill -9 $pid 2>/dev/null || true
+        sleep 2
+        
+        # Verify the process is killed
+        if lsof -ti:$port >/dev/null 2>&1; then
+            print_error "Failed to kill process on port $port. Please manually kill it and try again."
+            exit 1
+        else
+            print_success "Successfully freed port $port"
+        fi
+    else
+        print_status "Port $port is available"
+    fi
+}
+
 # Function to run backend
 run_backend() {
     print_status "Starting backend server..."
+    
+    # Kill any existing process on port 8420
+    kill_port 8420
     
     cd v1
     
@@ -202,10 +254,33 @@ run_backend() {
     cd ..
 }
 
+# Function to open browser (for Linux)
+open_browser() {
+    local url=$1
+    if command_exists xdg-open; then
+        xdg-open "$url" >/dev/null 2>&1
+    elif command_exists gnome-open; then
+        gnome-open "$url" >/dev/null 2>&1
+    elif command_exists firefox; then
+        firefox "$url" >/dev/null 2>&1 &
+    elif command_exists google-chrome; then
+        google-chrome "$url" >/dev/null 2>&1 &
+    elif command_exists chromium-browser; then
+        chromium-browser "$url" >/dev/null 2>&1 &
+    else
+        print_warning "Could not automatically open browser. Please manually open: $url"
+    fi
+}
+
 # Function to run frontend
 run_frontend() {
     local os_type=$1
     print_status "Starting frontend for $os_type..."
+    
+    # Kill any existing process on port 3000 (for web version)
+    if [ "$os_type" = "linux" ]; then
+        kill_port 3000
+    fi
     
     cd electron-app
     
@@ -219,43 +294,67 @@ run_frontend() {
             FRONTEND_PID=$!
             echo $FRONTEND_PID > logs/frontend.pid
             
-            sleep 3
+            # Wait for server to start
+            print_status "Waiting for development server to start..."
+            sleep 5
+            
+            # Check if frontend is running
             if kill -0 $FRONTEND_PID 2>/dev/null; then
                 print_success "Frontend web server started successfully (PID: $FRONTEND_PID)"
                 print_status "Frontend logs: electron-app/logs/frontend.log"
                 print_status "Web app: http://localhost:3000"
+                
+                # Wait a bit more for the server to be fully ready
+                sleep 3
+                
+                # Automatically open browser
+                print_status "Opening web browser..."
+                open_browser "http://localhost:3000"
+                print_success "Browser should now open automatically. If not, manually visit: http://localhost:3000"
             else
                 print_error "Failed to start frontend. Check logs/frontend.log for details."
                 exit 1
             fi
             ;;
         "macos")
-            print_status "Building and running Electron app for macOS..."
-            nohup npm run dev > logs/frontend.log 2>&1 &
+            print_status "Building and running Electron desktop app for macOS..."
+            nohup npm run build:renderer && npm run build:electron > logs/frontend.log 2>&1 &
             FRONTEND_PID=$!
             echo $FRONTEND_PID > logs/frontend.pid
             
-            sleep 5
+            # Wait longer for Electron app to build and start
+            print_status "Waiting for Electron app to build and launch..."
+            sleep 8
+            
             if kill -0 $FRONTEND_PID 2>/dev/null; then
-                print_success "Electron app started successfully (PID: $FRONTEND_PID)"
+                print_success "Electron desktop app started successfully (PID: $FRONTEND_PID)"
                 print_status "Frontend logs: electron-app/logs/frontend.log"
+                print_success "The desktop application should now be visible on your screen."
+                print_status "If the app doesn't appear, check the logs or try running 'npm run dev' manually in the electron-app directory."
             else
                 print_error "Failed to start Electron app. Check logs/frontend.log for details."
+                print_warning "You can try running 'npm run dev' manually in the electron-app directory."
                 exit 1
             fi
             ;;
         "windows")
-            print_status "Building and running Electron app for Windows..."
-            nohup npm run dev > logs/frontend.log 2>&1 &
+            print_status "Building and running Electron desktop app for Windows..."
+            nohup npm run build:renderer && npm run build:electron > logs/frontend.log 2>&1 &
             FRONTEND_PID=$!
             echo $FRONTEND_PID > logs/frontend.pid
             
-            sleep 5
+            # Wait longer for Electron app to build and start
+            print_status "Waiting for Electron app to build and launch..."
+            sleep 8
+            
             if kill -0 $FRONTEND_PID 2>/dev/null; then
-                print_success "Electron app started successfully (PID: $FRONTEND_PID)"
+                print_success "Electron desktop app started successfully (PID: $FRONTEND_PID)"
                 print_status "Frontend logs: electron-app/logs/frontend.log"
+                print_success "The desktop application should now be visible on your screen."
+                print_status "If the app doesn't appear, check the logs or try running 'npm run dev' manually in the electron-app directory."
             else
                 print_error "Failed to start Electron app. Check logs/frontend.log for details."
+                print_warning "You can try running 'npm run dev' manually in the electron-app directory."
                 exit 1
             fi
             ;;
