@@ -620,9 +620,12 @@ if manual_workers:
 else:
     # Auto-calculate based on CPU cores
     cpu_cores = os.cpu_count() or 2
-    if cpu_cores > 4:
+    if cpu_cores > 2:
         worker_count = cpu_cores // 2
-        print(f"[TaskQueue] Detected {cpu_cores} CPU cores, using {worker_count} workers (half of available cores)")
+        # If worker_count is odd, round up to next even number
+        if worker_count % 2 == 1:
+            worker_count += 1
+        print(f"[TaskQueue] Detected {cpu_cores} CPU cores, using {worker_count} workers (half of available cores, rounded to even)")
     else:
         worker_count = min(cpu_cores, 4)
         print(f"[TaskQueue] Detected {cpu_cores} CPU cores, using {worker_count} workers (limited to available cores, max 4)")
