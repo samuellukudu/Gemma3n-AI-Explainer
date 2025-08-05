@@ -493,20 +493,35 @@ main() {
             run_frontend $OS_TYPE
             print_success "Application restarted successfully!"
             ;;
+        "")
+            # Default behavior: setup and start the application
+            print_status "No command specified. Running setup and start automatically..."
+            setup_backend
+            setup_frontend
+            run_backend
+            run_frontend $OS_TYPE
+            echo
+            print_success "Application setup and started successfully!"
+            print_status "Use './run_app.sh status' to check service status"
+            print_status "Use './run_app.sh logs [backend|frontend]' to view logs"
+            print_status "Use './run_app.sh stop' to stop all services"
+            ;;
         *)
-            echo "Usage: $0 {setup|start|stop|restart|status|logs}"
+            echo "Usage: $0 [setup|start|stop|restart|status|logs]"
             echo
             echo "Commands:"
-            echo "  setup    - Install dependencies and setup the application"
-            echo "  start    - Start both backend and frontend services"
-            echo "  stop     - Stop all running services"
-            echo "  restart  - Restart all services"
-            echo "  status   - Show status of all services"
-            echo "  logs     - Show logs for a service (backend|frontend)"
+            echo "  (no args) - Setup and start the application (default)"
+            echo "  setup     - Install dependencies and setup the application only"
+            echo "  start     - Start both backend and frontend services only"
+            echo "  stop      - Stop all running services"
+            echo "  restart   - Restart all services"
+            echo "  status    - Show status of all services"
+            echo "  logs      - Show logs for a service (backend|frontend)"
             echo
             echo "Examples:"
-            echo "  $0 setup          # First time setup"
-            echo "  $0 start          # Start the application"
+            echo "  $0                # Setup and start (default)"
+            echo "  $0 setup          # Setup only"
+            echo "  $0 start          # Start only"
             echo "  $0 logs backend   # View backend logs"
             echo "  $0 logs frontend  # View frontend logs"
             exit 1
