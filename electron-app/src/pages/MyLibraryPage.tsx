@@ -22,7 +22,6 @@ import { useLibraryStats } from '../hooks/use-library-stats'
 interface MyLibraryPageProps {
   onBack: () => void
   onStartExploration: (topic: string) => void
-  onShowExplore: () => void
   onShowLessons: () => void
   onShowExplanation: () => void
 }
@@ -30,7 +29,6 @@ interface MyLibraryPageProps {
 export default function MyLibraryPage({
   onBack,
   onStartExploration,
-  onShowExplore,
   onShowLessons,
   onShowExplanation,
 }: MyLibraryPageProps) {
@@ -40,9 +38,6 @@ export default function MyLibraryPage({
     switch (page) {
       case "home":
         onBack()
-        break
-      case "explore":
-        onShowExplore()
         break
       case "lessons":
         onShowLessons()

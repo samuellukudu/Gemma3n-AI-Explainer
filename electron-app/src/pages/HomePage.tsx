@@ -60,7 +60,6 @@ const categories = [
 interface HomePageProps {
   onStartExploration?: (topic: string, category?: string) => void
   onShowLibrary?: () => void
-  onShowExplore?: () => void
   onShowLessons?: () => void
   onShowExplanation?: () => void
 }
@@ -68,7 +67,6 @@ interface HomePageProps {
 export default function HomePage({
   onStartExploration = () => {},
   onShowLibrary = () => {},
-  onShowExplore = () => {},
   onShowLessons = () => {},
   onShowExplanation = () => {},
 }: HomePageProps) {
@@ -143,9 +141,6 @@ export default function HomePage({
     switch (page) {
       case "library":
         onShowLibrary()
-        break
-      case "explore":
-        onShowExplore()
         break
       case "lessons":
         onShowLessons()

@@ -19,7 +19,6 @@ import { offlineManager } from '../lib/offline-manager'
 interface MyLessonsPageProps {
   onBack: () => void
   onStartExploration: (topic: string) => void
-  onShowExplore: () => void
   onShowLibrary: () => void
   onShowExplanation: () => void
 }
@@ -27,7 +26,6 @@ interface MyLessonsPageProps {
 export default function MyLessonsPage({
   onBack,
   onStartExploration,
-  onShowExplore,
   onShowLibrary,
   onShowExplanation,
 }: MyLessonsPageProps) {
@@ -72,9 +70,6 @@ export default function MyLessonsPage({
     switch (page) {
       case "home":
         onBack()
-        break
-      case "explore":
-        onShowExplore()
         break
       case "library":
         onShowLibrary()
@@ -196,9 +191,6 @@ export default function MyLessonsPage({
                 <Button onClick={onBack} className="bg-blue-500 hover:bg-blue-600 text-white">
                   Start New Lesson
                 </Button>
-                <Button onClick={onShowExplore} variant="outline" className="bg-transparent">
-                  Explore Topics
-                </Button>
               </div>
             </div>
           )}
@@ -244,10 +236,6 @@ export default function MyLessonsPage({
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Button onClick={onShowExplore} variant="outline" className="h-16 flex flex-col gap-2 bg-transparent">
-                  <Target className="h-6 w-6" />
-                  <span>Explore Topics</span>
-                </Button>
                 <Button onClick={onShowLibrary} variant="outline" className="h-16 flex flex-col gap-2 bg-transparent">
                   <BarChart3 className="h-6 w-6" />
                   <span>View Stats</span>

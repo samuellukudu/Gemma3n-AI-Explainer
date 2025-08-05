@@ -15,12 +15,6 @@ const DEFAULT_TASKS: Omit<ContentGenerationTask, 'id' | 'status' | 'progress' | 
     estimatedDuration: 45 // seconds
   },
   {
-    type: ContentTaskType.RELATED_QUESTIONS,
-    name: 'Find Related Questions', 
-    description: 'Discovering related questions to deepen understanding (runs concurrently)',
-    estimatedDuration: 30
-  },
-  {
     type: ContentTaskType.FLASHCARDS,
     name: 'Create Flashcards',
     description: 'Generating flashcards from lesson content for active recall practice',

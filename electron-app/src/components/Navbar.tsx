@@ -16,7 +16,6 @@ export default function Navbar({
   const navItems = [
     { id: "home", label: "Home" },
     { id: "explanation", label: "Explanation" },
-    { id: "explore", label: "Explore" },
     { id: "lessons", label: "My Lessons" },
     { id: "library", label: "My Library" },
   ]

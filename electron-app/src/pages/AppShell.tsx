@@ -3,12 +3,11 @@ import HomePage from "./HomePage"
 import ExplanationPage from "./ExplanationPage"
 import FlashcardsPage from "./FlashcardsPage"
 import QuizPage from "./QuizPage"
-import ExplorePage from "./ExplorePage"
 import MyLibraryPage from "./MyLibraryPage"
 import MyLessonsPage from "./MyLessonsPage"
 import { useLessonProgress } from '../hooks/use-lesson-progress'
 
-type AppState = "home" | "explanation" | "flashcards" | "quiz" | "explore" | "library" | "lessons"
+type AppState = "home" | "explanation" | "flashcards" | "quiz" | "library" | "lessons"
 
 export default function AppShell() {
   const [currentState, setCurrentState] = useState<AppState>("home")
@@ -50,9 +49,6 @@ export default function AppShell() {
     setCurrentState("library")
   }
 
-  const handleShowExplore = () => {
-    setCurrentState("explore")
-  }
 
   const handleShowLessons = () => {
     setCurrentState("lessons")
@@ -134,29 +130,17 @@ export default function AppShell() {
         <HomePage
           onStartExploration={handleStartExploration}
           onShowLibrary={handleShowLibrary}
-          onShowExplore={handleShowExplore}
           onShowLessons={handleShowLessons}
           onShowExplanation={handleShowExplanation}
         />
       )
 
-    case "explore":
-      return (
-        <ExplorePage
-          onBack={handleBackToHome}
-          onStartExploration={handleStartExploration}
-          onShowLibrary={handleShowLibrary}
-          onShowLessons={handleShowLessons}
-          onShowExplanation={handleShowExplanation}
-        />
-      )
 
     case "library":
       return (
         <MyLibraryPage
           onBack={handleBackToHome}
           onStartExploration={handleStartExploration}
-          onShowExplore={handleShowExplore}
           onShowLessons={handleShowLessons}
           onShowExplanation={handleShowExplanation}
         />
@@ -167,7 +151,6 @@ export default function AppShell() {
         <MyLessonsPage
           onBack={handleBackToHome}
           onStartExploration={handleStartExploration}
-          onShowExplore={handleShowExplore}
           onShowLibrary={handleShowLibrary}
           onShowExplanation={handleShowExplanation}
         />
@@ -182,7 +165,6 @@ export default function AppShell() {
           onBack={handleBackToHome}
           onGenerateFlashcards={handleGenerateFlashcards}
           onShowLibrary={handleShowLibrary}
-          onShowExplore={handleShowExplore}
           onShowLessons={handleShowLessons}
           onStepNavigation={handleStepNavigation}
         />

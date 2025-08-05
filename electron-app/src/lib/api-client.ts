@@ -179,12 +179,6 @@ export class APIClient {
     )
   }
 
-  // Get related questions by query ID
-  static async getRelatedQuestions(queryId: string): Promise<ContentResponse> {
-    return withRetry(() =>
-      apiRequest<ContentResponse>(`${APIEndpoints.RELATED_QUESTIONS}/${queryId}`)
-    )
-  }
 
   // Get recent lessons
   static async getRecentLessons(limit: number = 50): Promise<ContentListResponse> {
@@ -200,12 +194,6 @@ export class APIClient {
     )
   }
 
-  // Get recent related questions
-  static async getRecentRelatedQuestions(limit: number = 50): Promise<ContentListResponse> {
-    return withRetry(() =>
-      apiRequest<ContentListResponse>(`${APIEndpoints.RELATED_QUESTIONS}?limit=${limit}`)
-    )
-  }
 
   // Health check
   static async healthCheck(): Promise<HealthCheckResponse> {
@@ -262,7 +250,7 @@ export class APIClient {
   static async submitQueryAndWait(
     request: QueryRequest,
     onProgress?: (message: string) => void
-  ): Promise<{ queryId: string; lessons?: ContentResponse; relatedQuestions?: ContentResponse }> {
+  ): Promise<{ queryId: string; lessons?: ContentResponse }> {
     // Submit initial query
     const queryResponse = await this.submitQuery(request)
     
@@ -280,79 +268,24 @@ export class APIClient {
     await new Promise(resolve => setTimeout(resolve, 1000))
 
     // Try to get content (will fail initially, but we'll retry)
-    const results: { queryId: string; lessons?: ContentResponse; relatedQuestions?: ContentResponse } = {
+    const results: { queryId: string; lessons?: ContentResponse } = {
       queryId
     }
 
-    // Poll for lessons and related questions
+    // Poll for lessons
     const maxAttempts = 30 // 1 minute with 2-second intervals
-    const maxRelatedQuestionsAttempts = 15 // 30 seconds max for related questions
     let attempts = 0
-    let relatedQuestionsAttempts = 0
 
     while (attempts < maxAttempts && !results.lessons) {
       try {
-        if (!results.lessons) {
-          try {
-            results.lessons = await this.getLessons(queryId)
-            if (onProgress) {
-              onProgress('Lessons ready!')
-            }
-          } catch (error) {
-            // Expected to fail initially
-          }
-        }
-
-        if (!results.relatedQuestions && relatedQuestionsAttempts < maxRelatedQuestionsAttempts) {
-          try {
-            results.relatedQuestions = await this.getRelatedQuestions(queryId)
-            if (onProgress) {
-              onProgress('Related questions ready!')
-            }
-          } catch (error) {
-
-            // Expected to fail initially
-          }
-          relatedQuestionsAttempts++
-        }
-
-        if (!results.lessons || !results.relatedQuestions) {
-          await new Promise(resolve => setTimeout(resolve, 2000))
-          attempts++
+        results.lessons = await this.getLessons(queryId)
+        if (onProgress) {
+          onProgress('Lessons ready!')
         }
       } catch (error) {
-
-        attempts++
+        // Expected to fail initially
         await new Promise(resolve => setTimeout(resolve, 2000))
-      }
-    }
-
-    // If lessons are ready but related questions aren't, try a few more times for related questions only
-    if (results.lessons && !results.relatedQuestions && relatedQuestionsAttempts < maxRelatedQuestionsAttempts) {
-
-      const extraAttempts = Math.min(10, maxRelatedQuestionsAttempts - relatedQuestionsAttempts) // Up to 10 more attempts
-      
-      for (let i = 0; i < extraAttempts && !results.relatedQuestions; i++) {
-        try {
-          results.relatedQuestions = await this.getRelatedQuestions(results.queryId)
-          if (onProgress) {
-            onProgress('Related questions ready!')
-          }
-          break
-        } catch (error) {
-
-          if (i < extraAttempts - 1) {
-            await new Promise(resolve => setTimeout(resolve, 2000))
-          }
-        }
-      }
-    }
-
-    // If related questions still aren't ready, log a warning but continue
-    if (results.lessons && !results.relatedQuestions) {
-
-      if (onProgress) {
-        onProgress('Lessons ready! (Related questions may take longer)')
+        attempts++
       }
     }
 

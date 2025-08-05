@@ -19,7 +19,6 @@ interface ExplanationPageProps {
   onBack: () => void
   onGenerateFlashcards: (explanation: any) => void
   onShowLibrary: () => void
-  onShowExplore: () => void
   onShowLessons: () => void
   onStepNavigation: (stepIndex: number) => void
 }
@@ -31,7 +30,6 @@ export default function ExplanationPage({
   onBack = () => {},
   onGenerateFlashcards = () => {},
   onShowLibrary = () => {},
-  onShowExplore = () => {},
   onShowLessons = () => {},
   onStepNavigation = () => {},
 }: Partial<ExplanationPageProps>) {
@@ -117,9 +115,6 @@ export default function ExplanationPage({
       case "library":
         onShowLibrary()
         break
-      case "explore":
-        onShowExplore()
-        break
       case "lessons":
         onShowLessons()
         break
@@ -195,7 +190,7 @@ export default function ExplanationPage({
                   Creating Your Learning Experience
                 </h3>
                 <p className="text-gray-600 text-sm mb-4">
-                  Our AI is generating personalized lessons, flashcards, quizzes, and related questions 
+                  Our AI is generating personalized lessons, flashcards, and quizzes
                   to help you master "{topic}". You can see the progress above.
                 </p>
                 
@@ -298,9 +293,6 @@ export default function ExplanationPage({
               <div className="flex gap-4 justify-center">
                 <Button onClick={onBack} className="bg-blue-500 hover:bg-blue-600 text-white">
                   Start New Topic
-                </Button>
-                <Button onClick={onShowExplore} variant="outline" className="bg-transparent">
-                  Explore Topics
                 </Button>
               </div>
             </div>

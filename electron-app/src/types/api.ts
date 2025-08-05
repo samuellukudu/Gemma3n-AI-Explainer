@@ -42,8 +42,7 @@ export interface ContentListResponse {
 export enum ContentTaskType {
   LESSONS = 'lessons',
   FLASHCARDS = 'flashcards', 
-  QUIZ = 'quiz',
-  RELATED_QUESTIONS = 'related_questions'
+  QUIZ = 'quiz'
 }
 
 export interface ContentGenerationTask {
@@ -103,13 +102,7 @@ export interface Quiz {
   multiple_choice_questions: MultipleChoiceQuestion[]
 }
 
-// Related questions structure
-export interface RelatedQuestion {
-  question: string
-  category: 'basic' | 'intermediate' | 'advanced'
-  focus_area: string
-  relevance_score?: number
-}
+
 
 // API Error structure
 export interface APIError {
@@ -148,7 +141,6 @@ export enum APIEndpoints {
   LESSONS = '/api/lessons',
   FLASHCARDS = '/api/flashcards',
   QUIZ = '/api/quiz',
-  RELATED_QUESTIONS = '/api/related-questions',
   TASKS = '/api/tasks',
   HEALTH = '/api/health',
   PERFORMANCE = '/api/performance/metrics'
