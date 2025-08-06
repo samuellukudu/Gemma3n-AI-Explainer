@@ -99,16 +99,20 @@ export default function AppShell() {
   const handleNextStep = useCallback(async () => {
     const nextStepIndex = currentStepIndex + 1
     setCurrentStepIndex(nextStepIndex)
+    
+    // Always go to explanation state - the ExplanationPage will handle
+    // whether to show content generation or existing lesson content
     setCurrentState("explanation")
-    // Don't clear currentExplanation to preserve queryId and lesson context
-    // setCurrentExplanation(null)
-    setCurrentFlashcards([])
     
     // Track lesson access for progress tracking
     const existingLesson = lessonProgressList.find(lesson => lesson.topic === currentTopic)
     if (existingLesson) {
       await markLessonAccessed(existingLesson.queryId, nextStepIndex)
     }
+    
+    // Don't clear currentExplanation to preserve queryId and lesson context
+    // setCurrentExplanation(null)
+    setCurrentFlashcards([])
   }, [currentStepIndex, currentTopic, lessonProgressList, markLessonAccessed])
 
   const handleStepNavigation = useCallback(async (stepIndex: number) => {
@@ -167,6 +171,7 @@ export default function AppShell() {
           onShowLibrary={handleShowLibrary}
           onShowLessons={handleShowLessons}
           onStepNavigation={handleStepNavigation}
+          explanation={currentExplanation}
         />
       )
 

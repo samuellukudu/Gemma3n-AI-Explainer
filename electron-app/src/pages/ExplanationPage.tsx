@@ -21,6 +21,7 @@ interface ExplanationPageProps {
   onShowLibrary: () => void
   onShowLessons: () => void
   onStepNavigation: (stepIndex: number) => void
+  explanation?: any
 }
 
 export default function ExplanationPage({
@@ -32,15 +33,17 @@ export default function ExplanationPage({
   onShowLibrary = () => {},
   onShowLessons = () => {},
   onStepNavigation = () => {},
+  explanation = null,
 }: Partial<ExplanationPageProps>) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
   const { state: apiState, taskTracker, submitQuery, clearError } = useApiQuery()
   const { state: lessonsState, fetchLessons, clearError: clearLessonsError } = useLessons()
 
   const loadCompletedSteps = async () => {
-    if (apiState.queryId) {
+    const queryId = explanation?.queryId || apiState.queryId
+    if (queryId) {
       try {
-        const progress = await offlineManager.getLessonProgress(apiState.queryId)
+        const progress = await offlineManager.getLessonProgress(queryId)
         const completedStepIndices = Object.entries(progress)
           .filter(([_, data]) => data.completed)
           .map(([index]) => parseInt(index))
@@ -53,13 +56,27 @@ export default function ExplanationPage({
   }
 
   const generateExplanation = useCallback(async () => {
-    // First, try to get lessons from API if we have a query ID
+    // First, check if we have explanation prop with queryId
+    if (explanation?.queryId && !lessonsState.lessons.length && !lessonsState.loading) {
+      try {
+        await fetchLessons(explanation.queryId)
+        return
+      } catch (error) {
+        console.error('Failed to fetch lessons from explanation queryId:', error)
+        return
+      }
+    }
+
+    // Then, try to get lessons from API if we have a query ID
     if (apiState.queryId && !lessonsState.lessons.length && !lessonsState.loading) {
       try {
         await fetchLessons(apiState.queryId)
         return
       } catch (error) {
-
+        // If fetching existing lessons fails, don't automatically generate new content
+        // Let the user decide what to do
+        console.error('Failed to fetch existing lessons:', error)
+        return
       }
     }
 
@@ -72,7 +89,7 @@ export default function ExplanationPage({
 
       }
     }
-  }, [topic, apiState, lessonsState, submitQuery, fetchLessons])
+  }, [explanation, topic, apiState, lessonsState, submitQuery, fetchLessons])
 
   useEffect(() => {
     generateExplanation()
@@ -81,22 +98,23 @@ export default function ExplanationPage({
   // Load completed steps when queryId changes
   useEffect(() => {
     loadCompletedSteps()
-  }, [apiState.queryId])
+  }, [apiState.queryId, explanation?.queryId])
 
   // Track lesson access when component mounts or step changes
   useEffect(() => {
-    if (apiState.queryId && currentStepIndex !== undefined) {
+    const queryId = explanation?.queryId || apiState.queryId
+    if (queryId && currentStepIndex !== undefined) {
       // Save lesson access progress (not completed, just accessed)
 
-      offlineManager.saveLessonProgress(apiState.queryId, currentStepIndex, false)
+      offlineManager.saveLessonProgress(queryId, currentStepIndex, false)
       
       // Save topic info for later reference (only for user queries)
       if (lessonsState.lessons.length > 0 && isUserQuery) {
 
-        offlineManager.saveTopicInfo(apiState.queryId, topic, lessonsState.lessons.length, isUserQuery)
+        offlineManager.saveTopicInfo(queryId, topic, lessonsState.lessons.length, isUserQuery)
       }
     }
-  }, [apiState.queryId, currentStepIndex, topic, lessonsState.lessons.length, isUserQuery])
+  }, [explanation?.queryId, apiState.queryId, currentStepIndex, topic, lessonsState.lessons.length, isUserQuery])
 
   // Watch for API state changes and fetch lessons
   useEffect(() => {
@@ -106,6 +124,17 @@ export default function ExplanationPage({
       fetchLessons(apiState.queryId)
     }
   }, [apiState.queryId, lessonsState.lessons.length, lessonsState.loading, lessonsState.error, fetchLessons])
+
+  // Also check if we have currentExplanation with queryId but no lessons loaded
+  // This handles the case when navigating from quiz to next step
+  useEffect(() => {
+    // If we're on ExplanationPage but don't have apiState.queryId set,
+    // but we do have currentExplanation with queryId, use that
+    if (!apiState.queryId && !lessonsState.lessons.length && !lessonsState.loading) {
+      // This might happen when navigating from quiz - we need to trigger lesson loading
+      generateExplanation()
+    }
+  }, [apiState.queryId, lessonsState.lessons.length, lessonsState.loading, generateExplanation])
 
   const handleNavigate = (page: string) => {
     switch (page) {
@@ -127,27 +156,30 @@ export default function ExplanationPage({
 
 
   const createFlashcardFromLesson = async (lesson: Lesson, stepIndex: number) => {
+    const queryId = explanation?.queryId || apiState.queryId
     // Mark this lesson as completed when user starts learning it
-    if (apiState.queryId) {
+    if (queryId) {
 
-      await offlineManager.saveLessonProgress(apiState.queryId, stepIndex, true)
+      await offlineManager.saveLessonProgress(queryId, stepIndex, true)
       setCompletedSteps(prev => new Set([...prev, stepIndex]))
     }
 
     // Extract meaningful data for flashcard generation
-    const explanation = {
-      queryId: apiState.queryId,
+    const explanationData = {
+      queryId: queryId,
       currentStepIndex: stepIndex,
       lesson: lesson,
       topic: topic,
       totalSteps: lessonsState.lessons.length
     }
     
-    onGenerateFlashcards(explanation)
+    onGenerateFlashcards(explanationData)
   }
 
   // Show task tracking during content generation
-  if (apiState.loading || taskTracker.state.tasks.length > 0 && !taskTracker.state.isComplete) {
+  // But only if we don't have existing lessons and we're actually generating new content
+  if ((apiState.loading || taskTracker.state.tasks.length > 0 && !taskTracker.state.isComplete) && 
+      !lessonsState.lessons.length && !lessonsState.loading) {
     return (
       <div className="min-h-screen bg-white">
         <Navbar 

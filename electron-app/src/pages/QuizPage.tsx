@@ -240,14 +240,34 @@ export default function QuizPage({
           onNavigate={handleNavigate}
         />
         <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-3">
-          <div className="max-w-4xl mx-auto h-screen flex flex-col justify-center">
-            <div className="text-center">
-              <Trophy className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-              <h1 className="text-2xl font-bold text-gray-900 mb-3">
-                {isStepMode ? `Step ${explanation.currentStepIndex + 1} Complete!` : "Quiz Complete!"}
-              </h1>
+          <div className="max-w-4xl mx-auto py-4">
+            {/* Header - Static at top */}
+            <div className="flex items-center gap-3 mb-6">
+              <Button variant="outline" onClick={onBack} className="h-10 w-10 p-0 bg-transparent">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={onShowLibrary}
+                className="h-10 w-10 p-0 bg-transparent"
+                title="View Library & Stats"
+              >
+                <BarChart3 className="h-4 w-4" />
+              </Button>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-bold text-gray-900 truncate">
+                  {isStepMode ? `Step ${explanation.currentStepIndex + 1} Complete!` : "Quiz Complete!"}
+                </h1>
+                <p className="text-sm text-gray-600 truncate">
+                  {isStepMode ? `Completed: ${explanation.lesson?.title || 'Lesson Content'}` : "Great job on completing the quiz!"}
+                </p>
+              </div>
+            </div>
 
-              <Card className="max-w-xl mx-auto mb-6">
+            <div className="text-center">
+              <Trophy className="h-16 w-16 text-yellow-500 mx-auto mb-6" />
+
+              <Card className="max-w-xl mx-auto mb-6 shadow-lg">
                 <CardContent className="p-6 text-center">
                   <div className="text-4xl font-bold text-purple-600 mb-3">{percentage}%</div>
                   <p className="text-lg text-gray-700 mb-3">
@@ -272,20 +292,30 @@ export default function QuizPage({
                 </CardContent>
               </Card>
 
-              <div className="flex gap-3 justify-center">
-                <Button onClick={handleRetakeQuiz} variant="outline" className="h-10 px-6 text-sm bg-transparent">
+              <div className="flex gap-4 justify-center">
+                <Button 
+                  onClick={handleRetakeQuiz} 
+                  variant="outline" 
+                  className="h-12 px-6 text-base font-medium bg-white shadow-sm hover:shadow-md transition-shadow"
+                >
                   <RotateCcw className="mr-2 h-4 w-4" />
-                  Retake
+                  Retake Quiz
                 </Button>
 
                 {isStepMode && !isLastStep ? (
-                  <Button onClick={onNextStep} className="h-10 px-6 text-sm">
+                  <Button 
+                    onClick={onNextStep} 
+                    className="h-12 px-6 text-base font-medium bg-purple-600 hover:bg-purple-700 shadow-lg"
+                  >
                     <ArrowRight className="mr-2 h-4 w-4" />
                     Next Step
                   </Button>
                 ) : (
-                  <Button onClick={onReturnHome} className="h-10 px-6 text-sm">
-                    {isLastStep ? "🎉 Complete!" : "New Topic"}
+                  <Button 
+                    onClick={onReturnHome} 
+                    className="h-12 px-6 text-base font-medium bg-purple-600 hover:bg-purple-700 shadow-lg"
+                  >
+                    {isLastStep ? "🎉 Complete Course!" : "New Topic"}
                   </Button>
                 )}
               </div>
@@ -313,11 +343,19 @@ export default function QuizPage({
       />
 
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-3">
-        <div className="max-w-3xl mx-auto min-h-screen flex flex-col justify-center">
-          {/* Header - Compact */}
-          <div className="flex items-center gap-3 mb-3">
+        <div className="max-w-3xl mx-auto py-4">
+          {/* Header - Static at top */}
+          <div className="flex items-center gap-3 mb-4">
             <Button variant="outline" onClick={onBack} className="h-10 w-10 p-0 bg-transparent">
               <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onShowLibrary}
+              className="h-10 w-10 p-0 bg-transparent"
+              title="View Library & Stats"
+            >
+              <BarChart3 className="h-4 w-4" />
             </Button>
             <div className="flex-1 min-w-0">
               <h1 className="text-xl font-bold text-gray-900 truncate">
@@ -327,34 +365,29 @@ export default function QuizPage({
                 {isStepMode ? `Testing: ${explanation.lesson?.title || 'Lesson Content'}` : "Test your knowledge"}
               </p>
             </div>
-            <Badge variant="secondary" className="text-sm px-3 py-1">
-              {currentQuestion + 1} / {totalQuestions}
-            </Badge>
-            <Button
-              variant="outline"
-              onClick={onShowLibrary}
-              className="h-10 w-10 p-0 bg-transparent"
-              title="View Library & Stats"
-            >
-              <BarChart3 className="h-4 w-4" />
-            </Button>
           </div>
 
-          {/* Progress */}
-          <div className="mb-3">
-            <Progress value={progress} className="h-2" />
+          {/* Progress and Question Counter */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-medium text-gray-700">Quiz Progress</span>
+              <Badge variant="secondary" className="text-sm px-3 py-1">
+                {currentQuestion + 1} / {totalQuestions}
+              </Badge>
+            </div>
+            <Progress value={progress} className="h-1.5" />
           </div>
 
           {/* Question Card - Main Content */}
-          <Card className="mb-3">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg leading-relaxed">{currentQ?.question.question}</CardTitle>
+          <Card className="mb-6 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl leading-relaxed">{currentQ?.question.question}</CardTitle>
             </CardHeader>
-            <CardContent className="pb-4">
+            <CardContent className="pb-6">
               {currentQ?.type === "multiple_choice" && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {(currentQ.question as MultipleChoiceQuestion).options.map((option: string, index: number) => (
-                    <div key={index} className="flex items-center space-x-3 p-2.5 rounded-lg border hover:bg-gray-50">
+                    <div key={index} className="flex items-center space-x-3 p-3 rounded-lg border-2 hover:bg-gray-50 hover:border-purple-200 transition-colors cursor-pointer" onClick={() => setSelectedAnswer(index)}>
                       <input
                         type="radio"
                         id={`option-${index}`}
@@ -362,8 +395,9 @@ export default function QuizPage({
                         value={index}
                         checked={selectedAnswer === index}
                         onChange={() => setSelectedAnswer(index)}
+                        className="w-4 h-4 text-purple-600"
                       />
-                      <label htmlFor={`option-${index}`} className="text-sm cursor-pointer flex-1">
+                      <label htmlFor={`option-${index}`} className="text-base cursor-pointer flex-1">
                         {option}
                       </label>
                     </div>
@@ -372,8 +406,8 @@ export default function QuizPage({
               )}
 
               {currentQ?.type === "true_false" && (
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-3 p-2.5 rounded-lg border hover:bg-gray-50">
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3 p-3 rounded-lg border-2 hover:bg-gray-50 hover:border-purple-200 transition-colors cursor-pointer" onClick={() => setSelectedAnswer(true)}>
                     <input
                       type="radio"
                       id="true"
@@ -381,12 +415,13 @@ export default function QuizPage({
                       value="true"
                       checked={selectedAnswer === true}
                       onChange={() => setSelectedAnswer(true)}
+                      className="w-4 h-4 text-purple-600"
                     />
-                    <label htmlFor="true" className="text-sm cursor-pointer flex-1">
+                    <label htmlFor="true" className="text-base cursor-pointer flex-1 font-medium">
                       True
                     </label>
                   </div>
-                  <div className="flex items-center space-x-3 p-2.5 rounded-lg border hover:bg-gray-50">
+                  <div className="flex items-center space-x-3 p-3 rounded-lg border-2 hover:bg-gray-50 hover:border-purple-200 transition-colors cursor-pointer" onClick={() => setSelectedAnswer(false)}>
                     <input
                       type="radio"
                       id="false"
@@ -394,8 +429,9 @@ export default function QuizPage({
                       value="false"
                       checked={selectedAnswer === false}
                       onChange={() => setSelectedAnswer(false)}
+                      className="w-4 h-4 text-purple-600"
                     />
-                    <label htmlFor="false" className="text-sm cursor-pointer flex-1">
+                    <label htmlFor="false" className="text-base cursor-pointer flex-1 font-medium">
                       False
                     </label>
                   </div>
@@ -407,10 +443,10 @@ export default function QuizPage({
           {/* Result Display */}
           {showResult && (
             <Card
-              className={`mb-3 ${results[results.length - 1]?.correct ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50"}`}
+              className={`mb-6 shadow-lg ${results[results.length - 1]?.correct ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50"}`}
             >
-              <CardContent className="p-3">
-                <div className="flex items-center gap-3 mb-2">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3 mb-3">
                   {results[results.length - 1]?.correct ? (
                     <CheckCircle className="h-6 w-6 text-green-500" />
                   ) : (
@@ -420,9 +456,9 @@ export default function QuizPage({
                     {results[results.length - 1]?.correct ? "Correct!" : "Incorrect"}
                   </h3>
                 </div>
-                <p className="text-sm text-gray-700 mb-2">{results[results.length - 1]?.explanation}</p>
+                <p className="text-base text-gray-700 mb-3 leading-relaxed">{results[results.length - 1]?.explanation}</p>
                 {!results[results.length - 1]?.correct && currentQ && (
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-base font-medium text-gray-900">
                     Correct answer: {
                       currentQ.type === 'true_false' 
                         ? ((currentQ.question as TrueFalseQuestion).correct_answer ? 'True' : 'False')
@@ -434,14 +470,23 @@ export default function QuizPage({
             </Card>
           )}
 
-          {/* Action Button - Centered */}
-          <div className="text-center mt-4">
+          {/* Action Button - Positioned closer to content */}
+          <div className="text-center">
             {!showResult ? (
-              <Button onClick={handleAnswerSubmit} disabled={selectedAnswer === ""} className="h-11 px-8 text-sm" size="lg">
+              <Button 
+                onClick={handleAnswerSubmit} 
+                disabled={selectedAnswer === ""} 
+                className="h-12 px-8 text-base font-medium bg-purple-600 hover:bg-purple-700 shadow-lg" 
+                size="lg"
+              >
                 Submit Answer
               </Button>
             ) : (
-              <Button onClick={handleNextQuestion} className="h-11 px-8 text-sm" size="lg">
+              <Button 
+                onClick={handleNextQuestion} 
+                className="h-12 px-8 text-base font-medium bg-purple-600 hover:bg-purple-700 shadow-lg" 
+                size="lg"
+              >
                 {currentQuestion < totalQuestions - 1 ? "Next Question" : "Finish Quiz"}
               </Button>
             )}
