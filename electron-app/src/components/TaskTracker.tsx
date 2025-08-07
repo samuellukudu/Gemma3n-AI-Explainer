@@ -29,7 +29,7 @@ interface TaskTrackerProps {
 // Task type to icon mapping
 const TASK_ICONS = {
   [ContentTaskType.LESSONS]: BookOpen,
-  [ContentTaskType.RELATED_QUESTIONS]: HelpCircle,
+
   [ContentTaskType.FLASHCARDS]: CreditCard,
   [ContentTaskType.QUIZ]: Target,
 }
@@ -37,7 +37,7 @@ const TASK_ICONS = {
 // Task dependencies - which tasks must complete before this one can start
 const TASK_DEPENDENCIES = {
   [ContentTaskType.LESSONS]: [],
-  [ContentTaskType.RELATED_QUESTIONS]: [],
+
   [ContentTaskType.FLASHCARDS]: [ContentTaskType.LESSONS],
   [ContentTaskType.QUIZ]: [ContentTaskType.FLASHCARDS],
 }

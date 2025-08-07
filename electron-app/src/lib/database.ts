@@ -1,4 +1,4 @@
-import { Topic, RelatedQuestion, Lesson, Flashcard, Quiz, TopicDetails, DatabaseStats } from '../types/database';
+import { Topic, Lesson, Flashcard, Quiz, TopicDetails, DatabaseStats } from '../types/database';
 
 // This would be the path to the database file from the v1 backend
 const DB_PATH = '../v1/llm_app.db';
@@ -66,29 +66,7 @@ export class DatabaseService {
 
     return {
       topic,
-      related_questions: [
-        {
-          id: 1,
-          topic_id: topicId,
-          question: `What are the basic principles behind ${topic.name.toLowerCase()}?`,
-          category: 'basic',
-          focus_area: 'fundamentals'
-        },
-        {
-          id: 2,
-          topic_id: topicId,
-          question: `How do the components of ${topic.name.toLowerCase()} interact?`,
-          category: 'intermediate',
-          focus_area: 'mechanics'
-        },
-        {
-          id: 3,
-          topic_id: topicId,
-          question: `What are the advanced applications of ${topic.name.toLowerCase()}?`,
-          category: 'advanced',
-          focus_area: 'applications'
-        }
-      ],
+
       lessons: [
         {
           id: 1,
@@ -193,7 +171,7 @@ export class DatabaseService {
     const topics = await this.getTopics();
     return {
       topics: topics.length,
-      related_questions: topics.length * 3, // Mock data
+
       lessons: topics.length * 2, // Mock data
       flashcards: topics.length * 4, // Mock data
       quizzes: topics.length * 2 // Mock data

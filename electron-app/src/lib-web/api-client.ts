@@ -179,12 +179,7 @@ export class APIClient {
     )
   }
 
-  // Get related questions by query ID
-  static async getRelatedQuestions(queryId: string): Promise<ContentResponse> {
-    return withRetry(() =>
-      apiRequest<ContentResponse>(`${APIEndpoints.RELATED_QUESTIONS}/${queryId}`)
-    )
-  }
+
 
   // Get recent lessons
   static async getRecentLessons(limit: number = 50): Promise<ContentListResponse> {
@@ -200,12 +195,7 @@ export class APIClient {
     )
   }
 
-  // Get recent related questions
-  static async getRecentRelatedQuestions(limit: number = 50): Promise<ContentListResponse> {
-    return withRetry(() =>
-      apiRequest<ContentListResponse>(`${APIEndpoints.RELATED_QUESTIONS}?limit=${limit}`)
-    )
-  }
+
 
   // Health check
   static async healthCheck(): Promise<HealthCheckResponse> {
@@ -262,7 +252,7 @@ export class APIClient {
   static async submitQueryAndWait(
     request: QueryRequest,
     onProgress?: (message: string) => void
-  ): Promise<{ queryId: string; lessons?: ContentResponse; relatedQuestions?: ContentResponse }> {
+  ): Promise<{ queryId: string; lessons?: ContentResponse; flashcards?: ContentResponse; quizzes?: ContentResponse }> {
     // Submit initial query
     const queryResponse = await this.submitQuery(request)
     
@@ -280,18 +270,17 @@ export class APIClient {
     await new Promise(resolve => setTimeout(resolve, 1000))
 
     // Try to get content (will fail initially, but we'll retry)
-    const results: { queryId: string; lessons?: ContentResponse; relatedQuestions?: ContentResponse } = {
+    const results: { queryId: string; lessons?: ContentResponse; flashcards?: ContentResponse; quizzes?: ContentResponse } = {
       queryId
     }
 
-    // Poll for lessons and related questions
-    const maxAttempts = 30 // 1 minute with 2-second intervals
-    const maxRelatedQuestionsAttempts = 15 // 30 seconds max for related questions
+    // Poll for all content types
+    const maxAttempts = 60 // 2 minutes with 2-second intervals
     let attempts = 0
-    let relatedQuestionsAttempts = 0
 
-    while (attempts < maxAttempts && !results.lessons) {
+    while (attempts < maxAttempts && (!results.lessons || !results.flashcards || !results.quizzes)) {
       try {
+        // Check for lessons
         if (!results.lessons) {
           try {
             results.lessons = await this.getLessons(queryId)
@@ -303,20 +292,33 @@ export class APIClient {
           }
         }
 
-        if (!results.relatedQuestions && relatedQuestionsAttempts < maxRelatedQuestionsAttempts) {
+        // Check for flashcards (only if lessons are ready)
+        if (results.lessons && !results.flashcards) {
           try {
-            results.relatedQuestions = await this.getRelatedQuestions(queryId)
+            results.flashcards = await this.getFlashcards(queryId)
             if (onProgress) {
-              onProgress('Related questions ready!')
+              onProgress('Flashcards ready!')
             }
           } catch (error) {
-
             // Expected to fail initially
           }
-          relatedQuestionsAttempts++
         }
 
-        if (!results.lessons || !results.relatedQuestions) {
+        // Check for quizzes (only if lessons are ready)
+        if (results.lessons && !results.quizzes) {
+          try {
+            // Get quiz for the first lesson
+            results.quizzes = await this.getQuiz(queryId, 0)
+            if (onProgress) {
+              onProgress('Quizzes ready!')
+            }
+          } catch (error) {
+            // Expected to fail initially
+          }
+        }
+
+        // If we don't have all content yet, wait and retry
+        if (!results.lessons || !results.flashcards || !results.quizzes) {
           await new Promise(resolve => setTimeout(resolve, 2000))
           attempts++
         }
@@ -327,33 +329,18 @@ export class APIClient {
       }
     }
 
-    // If lessons are ready but related questions aren't, try a few more times for related questions only
-    if (results.lessons && !results.relatedQuestions && relatedQuestionsAttempts < maxRelatedQuestionsAttempts) {
-
-      const extraAttempts = Math.min(10, maxRelatedQuestionsAttempts - relatedQuestionsAttempts) // Up to 10 more attempts
-      
-      for (let i = 0; i < extraAttempts && !results.relatedQuestions; i++) {
-        try {
-          results.relatedQuestions = await this.getRelatedQuestions(results.queryId)
-          if (onProgress) {
-            onProgress('Related questions ready!')
-          }
-          break
-        } catch (error) {
-
-          if (i < extraAttempts - 1) {
-            await new Promise(resolve => setTimeout(resolve, 2000))
-          }
-        }
-      }
+    if (!results.lessons) {
+      throw new APIClientError('Failed to get lessons after polling', 408)
+    }
+    if (!results.flashcards) {
+      throw new APIClientError('Failed to get flashcards after polling', 408)
+    }
+    if (!results.quizzes) {
+      throw new APIClientError('Failed to get quizzes after polling', 408)
     }
 
-    // If related questions still aren't ready, log a warning but continue
-    if (results.lessons && !results.relatedQuestions) {
-
-      if (onProgress) {
-        onProgress('Lessons ready! (Related questions may take longer)')
-      }
+    if (onProgress) {
+      onProgress('All content ready!')
     }
 
     return results

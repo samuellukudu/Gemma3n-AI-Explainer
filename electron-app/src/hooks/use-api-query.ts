@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import APIClient, { APIClientError } from '../lib/api-client'
+import APIClient, { APIClientError } from '../lib-web/api-client'
 import { QueryRequest, ContentResponse, ContentTaskType, TaskStatus } from '../types/api'
 import { useTaskTracker } from './use-task-tracker'
 import { offlineManager } from '../lib/offline-manager'
@@ -9,8 +9,10 @@ interface QueryState {
   error: string | null
   queryId: string | null
   lessons: ContentResponse | null
-  relatedQuestions: ContentResponse | null
+  flashcards: ContentResponse | null
+  quizzes: ContentResponse | null
   progress: string | null
+  allContentReady: boolean
 }
 
 interface UseApiQueryReturn {
@@ -27,8 +29,10 @@ export function useApiQuery(): UseApiQueryReturn {
     error: null,
     queryId: null,
     lessons: null,
-    relatedQuestions: null,
+    flashcards: null,
+    quizzes: null,
     progress: null,
+    allContentReady: false,
   })
 
   const taskTracker = useTaskTracker()
@@ -76,32 +80,18 @@ export function useApiQuery(): UseApiQueryReturn {
         }))
       })
 
-      // Simulate task completion for UI feedback
+      // Update task tracker based on actual content generation
       if (result.queryId) {
-        // Mark lessons as completed
-        setTimeout(() => {
+        // Mark tasks as completed based on what we actually received
+        if (result.lessons) {
           taskTracker.markTaskCompleted(ContentTaskType.LESSONS)
-          
-          // Start flashcards task
-          setTimeout(() => {
-            taskTracker.updateTaskProgress(ContentTaskType.FLASHCARDS, 10)
-            
-            // Complete flashcards
-            setTimeout(() => {
-              taskTracker.markTaskCompleted(ContentTaskType.FLASHCARDS)
-              
-              // Start quiz task
-              setTimeout(() => {
-                taskTracker.updateTaskProgress(ContentTaskType.QUIZ, 10)
-                
-                // Complete quiz
-                setTimeout(() => {
-                  taskTracker.markTaskCompleted(ContentTaskType.QUIZ)
-                }, 1500)
-              }, 1000)
-            }, 1500)
-          }, 1000)
-        }, 1000)
+        }
+        if (result.flashcards) {
+          taskTracker.markTaskCompleted(ContentTaskType.FLASHCARDS)
+        }
+        if (result.quizzes) {
+          taskTracker.markTaskCompleted(ContentTaskType.QUIZ)
+        }
       }
 
       // Save topic info for offline access (but no query mapping needed)
@@ -115,8 +105,10 @@ export function useApiQuery(): UseApiQueryReturn {
         loading: false,
         queryId: result.queryId,
         lessons: result.lessons || null,
-        relatedQuestions: null, // Will be fetched separately when needed
-        progress: 'Query completed!',
+        flashcards: result.flashcards || null,
+        quizzes: result.quizzes || null,
+        progress: 'All content generated successfully!',
+        allContentReady: !!(result.lessons && result.flashcards && result.quizzes),
       }))
 
     } catch (error) {
@@ -159,8 +151,10 @@ export function useApiQuery(): UseApiQueryReturn {
       error: null,
       queryId: null,
       lessons: null,
-      relatedQuestions: null,
+      flashcards: null,
+      quizzes: null,
       progress: null,
+      allContentReady: false,
     })
     taskTracker.reset()
   }, [taskTracker])

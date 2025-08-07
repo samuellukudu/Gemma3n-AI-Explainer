@@ -3,13 +3,7 @@ export interface Topic {
   name: string;
 }
 
-export interface RelatedQuestion {
-  id: number;
-  topic_id: string;
-  question: string;
-  category: string;
-  focus_area: string;
-}
+
 
 export interface Lesson {
   id: number;
@@ -39,7 +33,6 @@ export interface Quiz {
 
 export interface TopicDetails {
   topic: Topic;
-  related_questions: RelatedQuestion[];
   lessons: Lesson[];
   flashcards: Flashcard[];
   quizzes: Quiz[];
@@ -47,7 +40,6 @@ export interface TopicDetails {
 
 export interface DatabaseStats {
   topics: number;
-  related_questions: number;
   lessons: number;
   flashcards: number;
   quizzes: number;
@@ -61,4 +53,4 @@ export interface UserStats {
   totalStudyTime: number;
   streak: number;
   lastStudyDate: string;
-} 
+}
