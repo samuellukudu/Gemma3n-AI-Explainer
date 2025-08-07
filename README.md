@@ -37,8 +37,8 @@ Before running the application, make sure you have the following installed:
    ```
 
 That's it! The application will start automatically based on your operating system:
-- **Linux**: Web version at http://localhost:3000
-- **macOS/Windows**: Electron desktop app
+- **Linux/Windows**: Web version at http://localhost:3210
+- **macOS**: electron-app/dist/mac-arm64/AI Explainer Desktop.app
 
 ## Script Commands
 
