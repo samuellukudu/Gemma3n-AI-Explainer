@@ -353,6 +353,8 @@ class EnhancedOfflineManager {
         createdAt: new Date().toISOString()
       }
       localStorage.setItem(topicInfoKey, JSON.stringify(topicInfo))
+      
+      // Note: Query mapping is now handled by backend automatically
     } catch (error) {
 
     }

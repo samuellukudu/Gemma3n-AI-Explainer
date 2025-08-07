@@ -54,3 +54,17 @@ dist/index.html                   0.59 kB │ gzip:  0.34 kB
 dist/assets/index-CyntgJ-f.css   66.31 kB │ gzip: 11.61 kB
 dist/assets/index-CnYGfHmf.js   322.75 kB │ gzip: 93.61 kB
 ✓ built in 1.20s
+
+> ai-explainer-desktop@1.0.0 build:renderer
+> vite build
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+vite v6.3.5 building for production...
+transforming...
+✓ 1606 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.59 kB │ gzip:  0.34 kB
+dist/assets/index-CuMja1zh.css   66.60 kB │ gzip: 11.64 kB
+dist/assets/index-Cvzch6yN.js   324.78 kB │ gzip: 93.83 kB
+✓ built in 1.12s

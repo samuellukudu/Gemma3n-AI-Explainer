@@ -354,123 +354,46 @@ class EnhancedOfflineManager {
       }
       localStorage.setItem(topicInfoKey, JSON.stringify(topicInfo))
       
-      // Also save query-to-topic mapping for quick lookup
-      await this.saveQueryMapping(topic, queryId)
+      // Note: Query mapping is now handled by backend automatically
     } catch (error) {
 
     }
   }
 
-  // Save mapping from query text to query ID for caching
+  // Note: Query mapping is now handled by the backend automatically
+  // This method is deprecated and will be removed in future versions
   async saveQueryMapping(query: string, queryId: string): Promise<void> {
-    try {
-      const normalizedQuery = this.normalizeQuery(query)
-      const queryMappingKey = `query_mapping_${normalizedQuery}`
-      const queryMapping = {
-        originalQuery: query,
-        normalizedQuery,
-        queryId,
-        createdAt: new Date().toISOString(),
-        lastAccessed: new Date().toISOString()
-      }
-      localStorage.setItem(queryMappingKey, JSON.stringify(queryMapping))
-      
-      // Also maintain a list of all cached queries for cleanup
-      const cachedQueriesKey = 'cached_queries_list'
-      const existingQueries = JSON.parse(localStorage.getItem(cachedQueriesKey) || '[]')
-      if (!existingQueries.includes(normalizedQuery)) {
-        existingQueries.push(normalizedQuery)
-        localStorage.setItem(cachedQueriesKey, JSON.stringify(existingQueries))
-      }
-    } catch (error) {
-
-    }
+    // No-op: Backend now handles query deduplication automatically
+    console.log('Query mapping is now handled by backend automatically')
   }
 
-  // Get cached query ID for a given query text
+  // Note: Query caching is now handled by the backend automatically
+  // This method is deprecated and will be removed in future versions
   async getCachedQueryId(query: string): Promise<string | null> {
-    try {
-      const normalizedQuery = this.normalizeQuery(query)
-      const queryMappingKey = `query_mapping_${normalizedQuery}`
-      const mapping = localStorage.getItem(queryMappingKey)
-      
-      if (mapping) {
-        const queryData = JSON.parse(mapping)
-        // Update last accessed time
-        queryData.lastAccessed = new Date().toISOString()
-        localStorage.setItem(queryMappingKey, JSON.stringify(queryData))
-        return queryData.queryId
-      }
-      
-      return null
-    } catch (error) {
-
-      return null
-    }
+    // Always return null - backend handles query deduplication
+    return null
   }
 
-  // Check if a query exists in cache
+  // Note: Query caching is now handled by the backend automatically
+  // These methods are deprecated and will be removed in future versions
   async hasQueryInCache(query: string): Promise<boolean> {
-    const cachedQueryId = await this.getCachedQueryId(query)
-    return cachedQueryId !== null
+    // Always return false - backend handles query deduplication
+    return false
   }
 
-  // Normalize query text for consistent caching
+  // Deprecated: Backend handles query normalization
   private normalizeQuery(query: string): string {
-    return query
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-      .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+    return query.toLowerCase().trim()
   }
 
-  // Get all cached queries
+  // Deprecated: No longer maintaining local query cache
   async getCachedQueries(): Promise<Array<{ originalQuery: string, normalizedQuery: string, queryId: string, createdAt: string, lastAccessed: string }>> {
-    try {
-      const cachedQueriesKey = 'cached_queries_list'
-      const queryList = JSON.parse(localStorage.getItem(cachedQueriesKey) || '[]')
-      
-      const queries = []
-      for (const normalizedQuery of queryList) {
-        const queryMappingKey = `query_mapping_${normalizedQuery}`
-        const mapping = localStorage.getItem(queryMappingKey)
-        if (mapping) {
-          queries.push(JSON.parse(mapping))
-        }
-      }
-      
-      // Sort by last accessed (most recent first)
-      return queries.sort((a, b) => new Date(b.lastAccessed).getTime() - new Date(a.lastAccessed).getTime())
-    } catch (error) {
-
-      return []
-    }
+    return []
   }
 
-  // Clear old cached queries (keep only recent ones)
+  // Deprecated: No longer needed with backend handling
   async cleanupOldQueries(maxQueries: number = 50): Promise<void> {
-    try {
-      const cachedQueries = await this.getCachedQueries()
-      
-      if (cachedQueries.length > maxQueries) {
-        const queriesToRemove = cachedQueries.slice(maxQueries)
-        
-        for (const queryData of queriesToRemove) {
-          const queryMappingKey = `query_mapping_${queryData.normalizedQuery}`
-          localStorage.removeItem(queryMappingKey)
-          
-          // Also remove topic info if it exists
-          const topicInfoKey = `topic_info_${queryData.queryId}`
-          localStorage.removeItem(topicInfoKey)
-        }
-        
-        // Update the cached queries list
-        const remainingQueries = cachedQueries.slice(0, maxQueries).map(q => q.normalizedQuery)
-        localStorage.setItem('cached_queries_list', JSON.stringify(remainingQueries))
-      }
-    } catch (error) {
-
-    }
+    // No-op: Backend handles query management
   }
 
   async getTopicInfo(queryId: string): Promise<{ queryId: string, topic: string, totalLessons: number, createdAt: string } | null> {
