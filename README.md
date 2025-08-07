@@ -1,6 +1,6 @@
 ## Quick Start
 
-**The Frontend has been fixed and it's working properly**
+*The bug on the Frontend has been fixed and it's working properly*
 
 ### Prerequisites
 
