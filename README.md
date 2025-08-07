@@ -1,5 +1,7 @@
 ## Quick Start
 
+**The Frontend has been fixed and it's working properly**
+
 ### Prerequisites
 
 Before running the application, make sure you have the following installed:
@@ -59,5 +61,3 @@ The `run_app.sh` script provides several useful commands:
 ./run_app.sh logs backend   # View backend logs in real-time
 ./run_app.sh logs frontend  # View frontend logs in real-time
 ```
-
-**The Frontend has been fixed and it's working properly**
