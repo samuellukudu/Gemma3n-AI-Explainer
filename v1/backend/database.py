@@ -8,126 +8,141 @@ import os
 
 class Database:
     def __init__(self, db_path: str = "llm_app.db"):
-        self.db_path = db_path
+        # Ensure the database path is absolute to avoid working directory issues
+        if not os.path.isabs(db_path):
+            # Get the project root directory (parent of backend directory)
+            project_root = Path(__file__).parent.parent
+            self.db_path = str(project_root / db_path)
+        else:
+            self.db_path = db_path
         self._lock = asyncio.Lock()
     
     async def init(self):
         """Initialize database tables and ensure schema is up to date"""
+        # Ensure the directory exists
+        db_dir = os.path.dirname(self.db_path)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+            
         db_exists = os.path.exists(self.db_path)
-        async with aiosqlite.connect(self.db_path) as db:
-            # Enable WAL mode for better concurrency
-            await db.execute("PRAGMA journal_mode=WAL;")
-            
-            # User sessions table
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS user_sessions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id TEXT UNIQUE NOT NULL,
-                    user_id TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    metadata TEXT
-                )
-            """)
-            
-            # Background tasks table
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS background_tasks (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    task_id TEXT UNIQUE NOT NULL,
-                    task_type TEXT NOT NULL,
-                    status TEXT DEFAULT 'pending',
-                    payload TEXT,
-                    result TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    completed_at TIMESTAMP,
-                    error_message TEXT
-                )
-            """)
-            
-            # Queries table to store query text and user_id for deduplication
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS queries (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    query_id TEXT UNIQUE NOT NULL,
-                    query_text TEXT NOT NULL,
-                    user_id TEXT,
-                    query_hash TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(query_hash, user_id)
-                )
-            """)
-            
-            # Lessons history table - simplified to use only query_id
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS lessons_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    query_id TEXT UNIQUE NOT NULL,
-                    lessons_json TEXT NOT NULL,
-                    processing_time REAL,
-                    generated BOOLEAN DEFAULT FALSE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
-            # Related questions history table - simplified to use only query_id
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS related_questions_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    query_id TEXT UNIQUE NOT NULL,
-                    questions_json TEXT NOT NULL,
-                    processing_time REAL,
-                    generated BOOLEAN DEFAULT FALSE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
-            # Flashcards history table - simplified to use only query_id
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS flashcards_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    query_id TEXT NOT NULL,
-                    lesson_index INTEGER NOT NULL,
-                    lesson_json TEXT NOT NULL,
-                    flashcards_json TEXT NOT NULL,
-                    processing_time REAL,
-                    generated BOOLEAN DEFAULT FALSE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(query_id, lesson_index)
-                )
-            """)
-            
-            # Quizzes history table
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS quizzes_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    query_id TEXT NOT NULL,
-                    lesson_index INTEGER NOT NULL,
-                    quiz_json TEXT NOT NULL,
-                    processing_time REAL,
-                    generated BOOLEAN DEFAULT FALSE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(query_id, lesson_index)
-                )
-            """)
-            
-            # Add migration logic for existing databases
-            await self._migrate_schema(db)
-            
-            # Create indexes for better performance
-            await db.execute("CREATE INDEX IF NOT EXISTS idx_background_tasks_status ON background_tasks(status)")
-            await db.execute("CREATE INDEX IF NOT EXISTS idx_queries_hash_user ON queries(query_hash, user_id)")
-            await db.execute("CREATE INDEX IF NOT EXISTS idx_queries_query_id ON queries(query_id)")
-            await db.execute("CREATE INDEX IF NOT EXISTS idx_lessons_history_query_id ON lessons_history(query_id)")
-            await db.execute("CREATE INDEX IF NOT EXISTS idx_related_questions_history_query_id ON related_questions_history(query_id)")
-            await db.execute("CREATE INDEX IF NOT EXISTS idx_flashcards_history_query_id ON flashcards_history(query_id)")
-            await db.execute("CREATE INDEX IF NOT EXISTS idx_quizzes_history_query_id ON quizzes_history(query_id)")
-            await db.execute("CREATE INDEX IF NOT EXISTS idx_lessons_history_generated ON lessons_history(generated)")
-            await db.execute("CREATE INDEX IF NOT EXISTS idx_related_questions_history_generated ON related_questions_history(generated)")
-            await db.execute("CREATE INDEX IF NOT EXISTS idx_flashcards_history_generated ON flashcards_history(generated)")
-            await db.execute("CREATE INDEX IF NOT EXISTS idx_quizzes_history_generated ON quizzes_history(generated)")
-            
-            await db.commit()
+        try:
+            async with aiosqlite.connect(self.db_path) as db:
+                # Enable WAL mode for better concurrency
+                await db.execute("PRAGMA journal_mode=WAL;")
+                
+                # User sessions table
+                await db.execute("""
+                    CREATE TABLE IF NOT EXISTS user_sessions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id TEXT UNIQUE NOT NULL,
+                        user_id TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        metadata TEXT
+                    )
+                """)
+                
+                # Background tasks table
+                await db.execute("""
+                    CREATE TABLE IF NOT EXISTS background_tasks (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        task_id TEXT UNIQUE NOT NULL,
+                        task_type TEXT NOT NULL,
+                        status TEXT DEFAULT 'pending',
+                        payload TEXT,
+                        result TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        completed_at TIMESTAMP,
+                        error_message TEXT
+                    )
+                """)
+                
+                # Queries table to store query text and user_id for deduplication
+                await db.execute("""
+                    CREATE TABLE IF NOT EXISTS queries (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        query_id TEXT UNIQUE NOT NULL,
+                        query_text TEXT NOT NULL,
+                        user_id TEXT,
+                        query_hash TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(query_hash, user_id)
+                    )
+                """)
+                
+                # Lessons history table - simplified to use only query_id
+                await db.execute("""
+                    CREATE TABLE IF NOT EXISTS lessons_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        query_id TEXT UNIQUE NOT NULL,
+                        lessons_json TEXT NOT NULL,
+                        processing_time REAL,
+                        generated BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Related questions history table - simplified to use only query_id
+                await db.execute("""
+                    CREATE TABLE IF NOT EXISTS related_questions_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        query_id TEXT UNIQUE NOT NULL,
+                        questions_json TEXT NOT NULL,
+                        processing_time REAL,
+                        generated BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Flashcards history table - simplified to use only query_id
+                await db.execute("""
+                    CREATE TABLE IF NOT EXISTS flashcards_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        query_id TEXT NOT NULL,
+                        lesson_index INTEGER NOT NULL,
+                        lesson_json TEXT NOT NULL,
+                        flashcards_json TEXT NOT NULL,
+                        processing_time REAL,
+                        generated BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(query_id, lesson_index)
+                    )
+                """)
+                
+                # Quizzes history table
+                await db.execute("""
+                    CREATE TABLE IF NOT EXISTS quizzes_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        query_id TEXT NOT NULL,
+                        lesson_index INTEGER NOT NULL,
+                        quiz_json TEXT NOT NULL,
+                        processing_time REAL,
+                        generated BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(query_id, lesson_index)
+                    )
+                """)
+                
+                # Add migration logic for existing databases
+                await self._migrate_schema(db)
+                
+                # Create indexes for better performance
+                await db.execute("CREATE INDEX IF NOT EXISTS idx_background_tasks_status ON background_tasks(status)")
+                await db.execute("CREATE INDEX IF NOT EXISTS idx_queries_hash_user ON queries(query_hash, user_id)")
+                await db.execute("CREATE INDEX IF NOT EXISTS idx_queries_query_id ON queries(query_id)")
+                await db.execute("CREATE INDEX IF NOT EXISTS idx_lessons_history_query_id ON lessons_history(query_id)")
+                await db.execute("CREATE INDEX IF NOT EXISTS idx_related_questions_history_query_id ON related_questions_history(query_id)")
+                await db.execute("CREATE INDEX IF NOT EXISTS idx_flashcards_history_query_id ON flashcards_history(query_id)")
+                await db.execute("CREATE INDEX IF NOT EXISTS idx_quizzes_history_query_id ON quizzes_history(query_id)")
+                await db.execute("CREATE INDEX IF NOT EXISTS idx_lessons_history_generated ON lessons_history(generated)")
+                await db.execute("CREATE INDEX IF NOT EXISTS idx_related_questions_history_generated ON related_questions_history(generated)")
+                await db.execute("CREATE INDEX IF NOT EXISTS idx_flashcards_history_generated ON flashcards_history(generated)")
+                await db.execute("CREATE INDEX IF NOT EXISTS idx_quizzes_history_generated ON quizzes_history(generated)")
+                
+                await db.commit()
+        except Exception as e:
+            print(f"Error initializing database at {self.db_path}: {e}")
+            raise
     
     async def _migrate_schema(self, db):
         """Handle schema migrations for existing databases"""
@@ -479,5 +494,6 @@ class Database:
 
 # Global database instance with caching
 from backend.cache import query_cache, CachedDatabase
-_db_instance = Database()
+from backend.config import settings
+_db_instance = Database(settings.DATABASE_PATH)
 db = CachedDatabase(_db_instance, query_cache)

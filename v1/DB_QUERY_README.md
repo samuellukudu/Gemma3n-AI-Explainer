@@ -1,104 +1,85 @@
-# Learning Database Query Tool
-
-This tool provides an interactive interface to query and explore the `learning.db` database created by the DSPy application.
-
-## Features
-
-- **View all topics** - Browse all topics in the database
-- **Search topics** - Search for topics by name
-- **Topic details** - View complete information for a topic including:
-  - Related questions (basic, intermediate, advanced)
-  - Lessons with overview, key concepts, and examples
-  - Flashcards for each lesson
-  - Quizzes (true/false and multiple choice)
-- **Search questions** - Search through all questions by content
-- **Database statistics** - View counts of all database tables
-- **Interactive quiz mode** - Take quizzes for any topic
-- **Export data** - Export topic data to JSON format
-
-## Usage
-
-### Interactive Mode (Recommended)
-
-```bash
-python db_query.py
-```
-
-This launches an interactive menu-driven interface where you can:
-- Navigate through topics and lessons
-- Take interactive quizzes
-- Search for specific content
-- Export data
-
-### Command Line Mode
-
-```bash
-# List all topics
-python db_query.py topics
-
-# Show database statistics
-python db_query.py stats
-
-# Search for topics
-python db_query.py search "solar panels"
-```
-
-## Database Structure
-
-The tool works with the following database tables:
-
-- **topics** - Main topics with UUID identifiers
-- **related_questions** - Questions categorized by difficulty level
-- **lessons** - Educational content with key concepts and examples
-- **flashcards** - Key terms and definitions for each lesson
-- **quizzes** - Assessment questions (true/false and multiple choice)
-
-## Requirements
-
-- Python 3.7+
-- SQLite3 (included with Python)
-- The `learning.db` file created by `dspy_app.py`
-
-## Example Output
-
-```
-============================================================
-           LEARNING DATABASE QUERY TOOL
-============================================================
-1. View all topics
-2. Search topics
-3. View topic details (questions, lessons, flashcards, quizzes)
-4. Search questions
-5. View database statistics
-6. Interactive quiz mode
-7. Export topic data
-0. Exit
-------------------------------------------------------------
-Enter your choice (0-7): 1
-
-Found 1 topics:
- 1. How do solar panels work?
-```
-
-## Quiz Mode
-
-The interactive quiz mode allows you to:
-- Select a topic
-- Answer true/false and multiple choice questions
-- Get immediate feedback and explanations
-- See your final score
-
-## Export Feature
-
-You can export any topic's complete data to JSON format, including:
-- Topic information
-- All related questions
-- Lessons with key concepts and examples
-- Flashcards with definitions
-- Quiz questions and answers
-
-This is useful for:
-- Backing up data
-- Sharing content
-- Further analysis
-- Integration with other tools 
+10:23:02 - LiteLLM:INFO: utils.py:1262 - Wrapper: Completed Call, calling success_handler
+INFO:LiteLLM:Wrapper: Completed Call, calling success_handler
+WARNING:backend.profiler:[BLOCKING DETECTED] task_queue.process_query_lessons: CPU time 0.112s > threshold 0.1s
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-18866' coro=<TaskQueue._process_query_lessons_task.<locals>.generate_flashcards_and_quiz_for_lesson() done, defined at /Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/task_queue.py:411> exception=OperationalError('unable to open database file')>
+Traceback (most recent call last):
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/task_queue.py", line 413, in generate_flashcards_and_quiz_for_lesson
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/cache.py", line 266, in create_flashcards_placeholder
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/database.py", line 276, in create_flashcards_placeholder
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 143, in __aenter__
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 130, in _connect
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 105, in run
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 382, in connector
+sqlite3.OperationalError: unable to open database file
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-18867' coro=<TaskQueue._process_query_lessons_task.<locals>.generate_flashcards_and_quiz_for_lesson() done, defined at /Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/task_queue.py:411> exception=OperationalError('unable to open database file')>
+Traceback (most recent call last):
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/task_queue.py", line 413, in generate_flashcards_and_quiz_for_lesson
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/cache.py", line 266, in create_flashcards_placeholder
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/database.py", line 276, in create_flashcards_placeholder
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 143, in __aenter__
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 130, in _connect
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 105, in run
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 382, in connector
+sqlite3.OperationalError: unable to open database file
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-18863' coro=<TaskQueue._process_query_lessons_task.<locals>.generate_flashcards_and_quiz_for_lesson() done, defined at /Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/task_queue.py:411> exception=OperationalError('unable to open database file')>
+Traceback (most recent call last):
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/task_queue.py", line 413, in generate_flashcards_and_quiz_for_lesson
+    await db.create_flashcards_placeholder(query_id, lesson_index, lesson.model_dump_json())
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/cache.py", line 266, in create_flashcards_placeholder
+    return await self.db.create_flashcards_placeholder(query_id, lesson_index, lesson_json)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/database.py", line 277, in create_flashcards_placeholder
+    await db.execute(
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 183, in execute
+    cursor = await self._execute(self._conn.execute, sql, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 122, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 105, in run
+    result = function()
+             ^^^^^^^^^^
+sqlite3.OperationalError: unable to open database file
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-18864' coro=<TaskQueue._process_query_lessons_task.<locals>.generate_flashcards_and_quiz_for_lesson() done, defined at /Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/task_queue.py:411> exception=OperationalError('unable to open database file')>
+Traceback (most recent call last):
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/task_queue.py", line 413, in generate_flashcards_and_quiz_for_lesson
+    await db.create_flashcards_placeholder(query_id, lesson_index, lesson.model_dump_json())
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/cache.py", line 266, in create_flashcards_placeholder
+    return await self.db.create_flashcards_placeholder(query_id, lesson_index, lesson_json)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/database.py", line 277, in create_flashcards_placeholder
+    await db.execute(
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 183, in execute
+    cursor = await self._execute(self._conn.execute, sql, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 122, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 105, in run
+    result = function()
+             ^^^^^^^^^^
+sqlite3.OperationalError: unable to open database file
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-18865' coro=<TaskQueue._process_query_lessons_task.<locals>.generate_flashcards_and_quiz_for_lesson() done, defined at /Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/task_queue.py:411> exception=OperationalError('unable to open database file')>
+Traceback (most recent call last):
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/task_queue.py", line 413, in generate_flashcards_and_quiz_for_lesson
+    await db.create_flashcards_placeholder(query_id, lesson_index, lesson.model_dump_json())
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/cache.py", line 266, in create_flashcards_placeholder
+    return await self.db.create_flashcards_placeholder(query_id, lesson_index, lesson_json)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/backend/database.py", line 277, in create_flashcards_placeholder
+    await db.execute(
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 183, in execute
+    cursor = await self._execute(self._conn.execute, sql, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 122, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "/Users/samuellukudu/STARTUPS/Gemma3n-AI-Explainer/v1/.venv/lib/python3.11/site-packages/aiosqlite/core.py", line 105, in run
+    result = function()
+             ^^^^^^^^^^
+sqlite3.OperationalError: unable to open database file
