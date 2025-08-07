@@ -26,12 +26,18 @@ Before running the application, make sure you have the following installed:
    cd Gemma3n-AI-Explainer
    ```
 
-2. **Setup the application (first time only):**
+2. **Install all dependencies, setup and start the application both the backend and frontend**
+```bash
+   ./run_app.sh
+   ```
+
+Optionally
+2.1 **Setup the application (first time only):**
    ```bash
    ./run_app.sh setup
    ```
 
-3. **Start the application:**
+2.2 **Start the application:**
    ```bash
    ./run_app.sh start
    ```
