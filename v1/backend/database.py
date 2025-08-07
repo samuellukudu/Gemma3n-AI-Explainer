@@ -45,6 +45,19 @@ class Database:
                 )
             """)
             
+            # Queries table to store query text and user_id for deduplication
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS queries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    query_id TEXT UNIQUE NOT NULL,
+                    query_text TEXT NOT NULL,
+                    user_id TEXT,
+                    query_hash TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(query_hash, user_id)
+                )
+            """)
+            
             # Lessons history table - simplified to use only query_id
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS lessons_history (
@@ -103,6 +116,8 @@ class Database:
             
             # Create indexes for better performance
             await db.execute("CREATE INDEX IF NOT EXISTS idx_background_tasks_status ON background_tasks(status)")
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_queries_hash_user ON queries(query_hash, user_id)")
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_queries_query_id ON queries(query_id)")
             await db.execute("CREATE INDEX IF NOT EXISTS idx_lessons_history_query_id ON lessons_history(query_id)")
             await db.execute("CREATE INDEX IF NOT EXISTS idx_related_questions_history_query_id ON related_questions_history(query_id)")
             await db.execute("CREATE INDEX IF NOT EXISTS idx_flashcards_history_query_id ON flashcards_history(query_id)")
@@ -395,6 +410,50 @@ class Database:
             ) as cursor:
                 rows = await cursor.fetchall()
                 return [dict(row) for row in rows]
+    
+    async def find_existing_query(self, query_text: str, user_id: str = None) -> Optional[str]:
+        """Find existing query_id for the same query text and user_id"""
+        import hashlib
+        
+        # Create hash of the query text for efficient lookup
+        query_hash = hashlib.sha256(query_text.lower().strip().encode()).hexdigest()
+        
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                "SELECT query_id FROM queries WHERE query_hash = ? AND user_id = ?",
+                (query_hash, user_id)
+            ) as cursor:
+                row = await cursor.fetchone()
+                return row['query_id'] if row else None
+    
+    async def save_query(self, query_id: str, query_text: str, user_id: str = None):
+        """Save a new query with its text and user_id"""
+        import hashlib
+        
+        # Create hash of the query text for efficient lookup
+        query_hash = hashlib.sha256(query_text.lower().strip().encode()).hexdigest()
+        
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute(
+                """
+                INSERT OR IGNORE INTO queries (query_id, query_text, user_id, query_hash)
+                VALUES (?, ?, ?, ?)
+                """,
+                (query_id, query_text, user_id, query_hash)
+            )
+            await db.commit()
+    
+    async def get_query_by_id(self, query_id: str) -> Optional[Dict]:
+        """Get query details by query_id"""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                "SELECT * FROM queries WHERE query_id = ?",
+                (query_id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                return dict(row) if row else None
 
     async def get_recent_related_questions(self, limit: int = 50) -> List[Dict]:
         """Get recent related questions history"""

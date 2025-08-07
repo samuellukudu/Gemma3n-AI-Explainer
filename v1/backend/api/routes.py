@@ -73,11 +73,27 @@ async def get_task_status(task_id: str):
 @profile_endpoint("api.process_query")
 async def process_query(request: QueryRequest):
     """
-    Accepts a query and user_id, triggers both related questions and lessons generation as background tasks,
+    Accepts a query and user_id, checks for existing queries to avoid duplicates,
+    triggers both related questions and lessons generation as background tasks,
     and returns immediately with task IDs for status tracking.
     """
     try:
+        # Check if this query already exists for this user
+        existing_query_id = await db.find_existing_query(request.query, request.user_id)
+        
+        if existing_query_id:
+            logger.info(f"[QueryAPI] Found existing query_id {existing_query_id} for query: {request.query[:50]}...")
+            return QueryResponse(
+                success=True,
+                message="Query already exists. Returning existing query_id.",
+                query_id=existing_query_id
+            )
+        
+        # Generate new query_id for new query
         query_id = str(uuid.uuid4())
+        
+        # Save the new query to database
+        await db.save_query(query_id, request.query, request.user_id)
         
         # Submit related questions generation as background task
         await task_queue.submit_task(
@@ -304,6 +320,29 @@ async def get_content_generation_status(query_id: str):
         raise HTTPException(
             status_code=500,
             detail=f"Error checking content generation status: {str(e)}"
+        )
+
+# Query details endpoint
+@router.get("/query/{query_id}")
+async def get_query_details(query_id: str):
+    """Get query details by query_id"""
+    try:
+        query_details = await db.get_query_by_id(query_id)
+        if not query_details:
+            raise HTTPException(status_code=404, detail="Query not found")
+        
+        return {
+            "query_id": query_details["query_id"],
+            "query_text": query_details["query_text"],
+            "user_id": query_details["user_id"],
+            "created_at": query_details["created_at"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving query details: {str(e)}"
         )
 
 # Performance monitoring endpoint

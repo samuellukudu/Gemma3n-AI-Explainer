@@ -279,6 +279,18 @@ class CachedDatabase:
     
     async def get_recent_flashcards(self, limit: int = 50) -> List[Dict]:
         return await self.db.get_recent_flashcards(limit)
+    
+    async def find_existing_query(self, query_text: str, user_id: str = None) -> Optional[str]:
+        """Find existing query_id for the same query text and user_id"""
+        return await self.db.find_existing_query(query_text, user_id)
+    
+    async def save_query(self, query_id: str, query_text: str, user_id: str = None):
+        """Save a new query with its text and user_id"""
+        return await self.db.save_query(query_id, query_text, user_id)
+    
+    async def get_query_by_id(self, query_id: str) -> Optional[Dict]:
+        """Get query details by query_id"""
+        return await self.db.get_query_by_id(query_id)
 
 # Initialize cache with configuration from settings
 # Global cache instance
