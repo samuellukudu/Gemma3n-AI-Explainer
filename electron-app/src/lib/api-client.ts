@@ -8,7 +8,8 @@ import {
   PerformanceMetrics,
   APIError,
   APIEndpoints,
-  TaskStatus
+  TaskStatus,
+  ContentStatusResponse
 } from '../types/api'
 
 // Configuration - Updated for Vite environment variables
@@ -205,12 +206,19 @@ export class APIClient {
     return apiRequest<PerformanceMetrics>(APIEndpoints.PERFORMANCE)
   }
 
+  // Get content generation status
+  static async getContentStatus(queryId: string): Promise<ContentStatusResponse> {
+    return withRetry(() =>
+      apiRequest<ContentStatusResponse>(`${APIEndpoints.CONTENT_STATUS}/${queryId}`)
+    )
+  }
+
   // Poll task status until completion
   static async pollTaskStatus(
     taskId: string,
     onProgress?: (status: TaskStatusResponse) => void,
     pollInterval: number = 2000,
-    maxPolls: number = 150 // 5 minutes max
+    maxPolls: number = 450 // 15 minutes max
   ): Promise<TaskStatusResponse> {
     let polls = 0
     

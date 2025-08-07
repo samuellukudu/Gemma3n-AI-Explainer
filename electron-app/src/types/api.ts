@@ -135,6 +135,19 @@ export enum TaskStatus {
   FAILED = 'failed'
 }
 
+// Content status response structure (matches the curl example)
+export interface ContentStatusResponse {
+  query_id: string
+  lessons_generated: boolean
+  related_questions_generated: boolean
+  flashcards_generated: boolean | {
+    [key: string]: boolean
+  }
+  quizzes_generated: boolean | {
+    [key: string]: boolean
+  }
+}
+
 // API endpoints enum
 export enum APIEndpoints {
   QUERY = '/api/query',
@@ -143,5 +156,6 @@ export enum APIEndpoints {
   QUIZ = '/api/quiz',
   TASKS = '/api/tasks',
   HEALTH = '/api/health',
-  PERFORMANCE = '/api/performance/metrics'
-} 
+  PERFORMANCE = '/api/performance/metrics',
+  CONTENT_STATUS = '/api/content-status'
+}

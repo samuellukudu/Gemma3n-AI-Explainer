@@ -37,64 +37,59 @@ export function useApiQuery(): UseApiQueryReturn {
 
   const taskTracker = useTaskTracker()
 
-  const submitQuery = useCallback(async (query: string, userId?: string) => {
+  const submitQuery = useCallback(async (query: string, userId: string = 'user-001') => {
     setState(prev => ({
       ...prev,
       loading: true,
       error: null,
-      progress: 'Checking backend connection...',
+      progress: 'Submitting query...',
+      allContentReady: false,
     }))
 
     try {
-      // Check if backend is reachable
-      try {
-        await APIClient.healthCheck()
-      } catch (healthError) {
-        setState(prev => ({
-          ...prev,
-          progress: 'Backend connection failed. Is the server running?',
-        }))
-        // Continue anyway in case health endpoint doesn't exist
-      }
-
       const request: QueryRequest = {
         query,
         user_id: userId,
       }
 
-      setState(prev => ({
-        ...prev,
-        progress: 'Submitting query to backend...',
-      }))
-
-      // Start task tracking immediately
-      taskTracker.startTracking(`query-${Date.now()}`)
-
-      console.log('Submitting query:', request)
-
-      // Use the simplified method - backend handles query deduplication
-      const result = await APIClient.submitQueryAndWait(request, (progress) => {
-        setState(prev => ({
-          ...prev,
-          progress,
-        }))
-      })
-
-      // Update task tracker based on actual content generation
-      if (result.queryId) {
-        // Mark tasks as completed based on what we actually received
-        if (result.lessons) {
-          taskTracker.markTaskCompleted(ContentTaskType.LESSONS)
-        }
-        if (result.flashcards) {
-          taskTracker.markTaskCompleted(ContentTaskType.FLASHCARDS)
-        }
-        if (result.quizzes) {
-          taskTracker.markTaskCompleted(ContentTaskType.QUIZ)
-        }
+      // Submit the initial query to get queryId
+      const queryResponse = await APIClient.submitQuery(request)
+      
+      if (!queryResponse.success || !queryResponse.query_id) {
+        throw new APIClientError('Query submission failed', 400)
       }
 
-      // Save topic info for offline access (but no query mapping needed)
+      const queryId = queryResponse.query_id
+      
+      // Start task tracking with the actual queryId
+      taskTracker.startTracking(queryId)
+      
+      setState(prev => ({
+        ...prev,
+        queryId,
+        progress: 'Content generation started...',
+      }))
+
+      // Use the improved polling mechanism
+      const result = await APIClient.submitQueryAndWait(request, (message) => {
+        setState(prev => ({
+          ...prev,
+          progress: message,
+        }))
+        
+        // Update task tracker based on progress messages
+        if (message.includes('Lessons ready')) {
+          taskTracker.markTaskCompleted(ContentTaskType.LESSONS)
+        }
+        if (message.includes('Flashcards ready')) {
+          taskTracker.markTaskCompleted(ContentTaskType.FLASHCARDS)
+        }
+        if (message.includes('Quizzes ready')) {
+          taskTracker.markTaskCompleted(ContentTaskType.QUIZ)
+        }
+      })
+
+      // Save topic info for offline access
       if (result.queryId && result.lessons) {
         await offlineManager.saveTopicInfo(result.queryId, query, result.lessons.content?.length || 0)
         console.log('Saved topic info for query ID:', result.queryId)
@@ -112,8 +107,6 @@ export function useApiQuery(): UseApiQueryReturn {
       }))
 
     } catch (error) {
-
-      
       let errorMessage = 'An unexpected error occurred'
       
       if (error instanceof APIClientError) {

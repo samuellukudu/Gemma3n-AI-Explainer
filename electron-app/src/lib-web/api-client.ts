@@ -8,7 +8,8 @@ import {
   PerformanceMetrics,
   APIError,
   APIEndpoints,
-  TaskStatus
+  TaskStatus,
+  ContentStatusResponse
 } from '../types/api'
 
 // Configuration - Updated for Vite environment variables
@@ -207,12 +208,19 @@ export class APIClient {
     return apiRequest<PerformanceMetrics>(APIEndpoints.PERFORMANCE)
   }
 
+  // Get content generation status
+  static async getContentStatus(queryId: string): Promise<ContentStatusResponse> {
+    return withRetry(() =>
+      apiRequest<ContentStatusResponse>(`${APIEndpoints.CONTENT_STATUS}/${queryId}`)
+    )
+  }
+
   // Poll task status until completion
   static async pollTaskStatus(
     taskId: string,
     onProgress?: (status: TaskStatusResponse) => void,
     pollInterval: number = 2000,
-    maxPolls: number = 150 // 5 minutes max
+    maxPolls: number = 450 // 15 minutes max
   ): Promise<TaskStatusResponse> {
     let polls = 0
     
@@ -269,74 +277,104 @@ export class APIClient {
     // Wait a bit for tasks to be created
     await new Promise(resolve => setTimeout(resolve, 1000))
 
-    // Try to get content (will fail initially, but we'll retry)
-    const results: { queryId: string; lessons?: ContentResponse; flashcards?: ContentResponse; quizzes?: ContentResponse } = {
-      queryId
-    }
-
-    // Poll for all content types
-    const maxAttempts = 60 // 2 minutes with 2-second intervals
+    // Poll content status until all content is ready
+    const maxAttempts = 300 // 10 minutes with 2-second intervals
     let attempts = 0
+    let contentStatus: ContentStatusResponse | null = null
 
-    while (attempts < maxAttempts && (!results.lessons || !results.flashcards || !results.quizzes)) {
+    while (attempts < maxAttempts) {
       try {
-        // Check for lessons
-        if (!results.lessons) {
-          try {
-            results.lessons = await this.getLessons(queryId)
-            if (onProgress) {
-              onProgress('Lessons ready!')
-            }
-          } catch (error) {
-            // Expected to fail initially
-          }
+        contentStatus = await this.getContentStatus(queryId)
+        
+        // Check if lessons are ready
+        if (contentStatus.lessons_generated && onProgress) {
+          onProgress('Lessons ready!')
         }
-
-        // Check for flashcards (only if lessons are ready)
-        if (results.lessons && !results.flashcards) {
-          try {
-            results.flashcards = await this.getFlashcards(queryId)
-            if (onProgress) {
+        
+        // Handle flashcards progress
+        let allFlashcardsReady = false
+        if (typeof contentStatus.flashcards_generated === 'boolean') {
+          allFlashcardsReady = contentStatus.flashcards_generated
+          if (allFlashcardsReady && onProgress) {
+            onProgress('Flashcards ready!')
+          }
+        } else {
+          const flashcardEntries = Object.entries(contentStatus.flashcards_generated)
+          const completedFlashcards = flashcardEntries.filter(([_, ready]) => ready).length
+          const totalFlashcards = flashcardEntries.length
+          allFlashcardsReady = totalFlashcards > 0 && completedFlashcards === totalFlashcards
+          
+          if (onProgress) {
+            if (allFlashcardsReady) {
               onProgress('Flashcards ready!')
+            } else if (completedFlashcards > 0) {
+              onProgress(`Flashcards: ${completedFlashcards}/${totalFlashcards} ready`)
             }
-          } catch (error) {
-            // Expected to fail initially
           }
         }
-
-        // Check for quizzes (only if lessons are ready)
-        if (results.lessons && !results.quizzes) {
-          try {
-            // Get quiz for the first lesson
-            results.quizzes = await this.getQuiz(queryId, 0)
-            if (onProgress) {
+        
+        // Handle quizzes progress
+        let allQuizzesReady = false
+        if (typeof contentStatus.quizzes_generated === 'boolean') {
+          allQuizzesReady = contentStatus.quizzes_generated
+          if (allQuizzesReady && onProgress) {
+            onProgress('Quizzes ready!')
+          }
+        } else {
+          const quizEntries = Object.entries(contentStatus.quizzes_generated)
+          const completedQuizzes = quizEntries.filter(([_, ready]) => ready).length
+          const totalQuizzes = quizEntries.length
+          allQuizzesReady = totalQuizzes > 0 && completedQuizzes === totalQuizzes
+          
+          if (onProgress) {
+            if (allQuizzesReady) {
               onProgress('Quizzes ready!')
+            } else if (completedQuizzes > 0) {
+              onProgress(`Quizzes: ${completedQuizzes}/${totalQuizzes} ready`)
             }
-          } catch (error) {
-            // Expected to fail initially
           }
         }
-
-        // If we don't have all content yet, wait and retry
-        if (!results.lessons || !results.flashcards || !results.quizzes) {
-          await new Promise(resolve => setTimeout(resolve, 2000))
-          attempts++
+        
+        // If all content is ready, break out of the loop
+        if (contentStatus.lessons_generated && allFlashcardsReady && allQuizzesReady) {
+          break
         }
+        
+        // Wait before next poll
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        attempts++
       } catch (error) {
-
         attempts++
         await new Promise(resolve => setTimeout(resolve, 2000))
       }
     }
 
-    if (!results.lessons) {
-      throw new APIClientError('Failed to get lessons after polling', 408)
+    // If we couldn't get content status or content isn't ready, throw error
+    if (!contentStatus) {
+      throw new APIClientError('Failed to get content status after polling', 408)
     }
-    if (!results.flashcards) {
-      throw new APIClientError('Failed to get flashcards after polling', 408)
+    
+    const flashcardValues = Object.values(contentStatus.flashcards_generated)
+    const allFlashcardsReady = flashcardValues.length > 0 && flashcardValues.every(ready => ready)
+    
+    const quizValues = Object.values(contentStatus.quizzes_generated)
+    const allQuizzesReady = quizValues.length > 0 && quizValues.every(ready => ready)
+    
+    if (!contentStatus.lessons_generated || !allFlashcardsReady || !allQuizzesReady) {
+      throw new APIClientError('Content generation incomplete after polling timeout', 408)
     }
-    if (!results.quizzes) {
-      throw new APIClientError('Failed to get quizzes after polling', 408)
+
+    // Now fetch the actual content
+    const results: { queryId: string; lessons?: ContentResponse; flashcards?: ContentResponse; quizzes?: ContentResponse } = {
+      queryId
+    }
+
+    try {
+      results.lessons = await this.getLessons(queryId)
+      results.flashcards = await this.getFlashcards(queryId)
+      results.quizzes = await this.getQuiz(queryId, 0)
+    } catch (error) {
+      throw new APIClientError('Failed to fetch content after status confirmed ready', 500)
     }
 
     if (onProgress) {
