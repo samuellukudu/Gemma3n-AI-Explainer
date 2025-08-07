@@ -52,7 +52,7 @@ npm run dev
 ```
 
 This will:
-- Start the Vite development server on port 3000
+- Start the Vite development server on port 3210
 - Launch the Electron app in development mode
 - Enable hot reloading for both React and Electron
 
@@ -93,7 +93,7 @@ npm run dist:mac
 npm run dist:mac -- --x64
 ```
 
-**Build Outputs:**
+**Build Outputs (located in the `dist/` folder):**
 - `AI Explainer Desktop-1.0.0-arm64.dmg` - ARM64 DMG installer
 - `AI Explainer Desktop-1.0.0-arm64-mac.zip` - ARM64 ZIP archive
 - `AI Explainer Desktop-1.0.0.dmg` - Intel x64 DMG installer (when using --x64)
@@ -245,7 +245,7 @@ New UI components can be added in `src/components/ui/` following the existing pa
 ### Common Issues
 
 1. **Database not found**: Make sure the v1 backend database exists at `../v1/llm_app.db`
-2. **Port 3000 in use**: Change the port in `vite.config.ts` and update the wait-on URL in package.json
+2. **Port 3210 in use**: Change the port in `vite.config.ts` and update the wait-on URL in package.json
 3. **Build errors**: Make sure all dependencies are installed with `npm install`
 
 ### Development Tips

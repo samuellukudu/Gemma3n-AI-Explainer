@@ -60,4 +60,4 @@ The `run_app.sh` script provides several useful commands:
 ./run_app.sh logs frontend  # View frontend logs in real-time
 ```
 
-There is a serious bug in the frontend in relation to query generation, retrieval and local storage that i discovered a couple of hours before the end of the competition, as such, I can't do anything about it due to time constraints 
+**The Frontend has been fixed and it's working properly**
