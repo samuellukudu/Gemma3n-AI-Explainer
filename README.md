@@ -31,7 +31,8 @@ Before running the application, make sure you have the following installed:
    ./run_app.sh
    ```
 
-Optionally
+*Optionally*
+
 2.1 **Setup the application (first time only):**
    ```bash
    ./run_app.sh setup
